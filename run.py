@@ -42,6 +42,39 @@ def ask_openjev(st: dict[str, str]) -> dict[str, Any]:
     return {"noul": noul, "bins": bins, "latency_s": round(time.time() - t0, 3), "model": f"openjev@{openjev_arm.REVISION[:7]}"}
 
 
+def ask_game(arm: str, g: dict[str, Any], today: str) -> dict[str, Any]:
+    import game_questions as gq
+    st, qs = gq.state(g, today), gq.jev_questions(g)
+    t0 = time.time()
+    if arm == "jev":
+        r = jev.ask(st, qs)
+        a = r["answers"]
+        get = lambda name: [float(a[name]["probabilities"].get(str(i), a[name]["probabilities"].get(i, 0.0)))
+                            for i in range(len(qs[name]["criteria"]))]
+        res = gq.combine(float(a["win_a"]["noul"]), float(a["win_b"]["noul"]), get("bins_a"), get("bins_b"))
+        return {**res, "jev_confidence": (a["bins_a"].get("confidence", 0) + a["bins_b"].get("confidence", 0)) / 2,
+                "latency_s": r["latency_s"], "attempts": r["attempts"], "model": r.get("model")}
+    import openjev_arm
+    a = openjev_arm.ask_questions(st, qs)
+    return {**gq.combine(a["win_a"], a["win_b"], a["bins_a"], a["bins_b"]), "latency_s": round(time.time() - t0, 3),
+            "model": f"openjev@{openjev_arm.REVISION[:7]}"}
+
+
+def run_games(args) -> None:
+    path = args.snapshot or sorted(p for p in (ROOT / "runs").glob("games-2*.json") if not p.stem.endswith("resolved"))[-1]
+    snap = json.loads(path.read_text())
+    today, gs = snap["fetched_at"][:10], snap["games"][: args.limit]
+    for arm in args.arms.split(","):
+        for k in range(1, RUNS[arm] + 1):
+            t0 = time.time()
+            with ThreadPoolExecutor(args.jev_concurrency if arm == "jev" else 1) as pool:
+                answers = list(pool.map(lambda g: ask_game(arm, g, today), gs))
+            out = ROOT / "runs" / f"{arm}-games-{snap['stamp']}{'-' + args.tag if args.tag else ''}-run{k}.json"
+            out.write_text(json.dumps({"arm": arm, "run": k, "snapshot": path.name, "date": time.strftime("%Y-%m-%d %H:%M:%S"),
+                                       "answers": {g["id"]: a for g, a in zip(gs, answers)}}, indent=1))
+            print(f"{arm} run{k}: {len(gs)} games in {time.time() - t0:.0f}s -> {out.name}", flush=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--snapshot", type=Path)
@@ -49,7 +82,10 @@ def main() -> None:
     ap.add_argument("--limit", type=int)
     ap.add_argument("--tag", default="")
     ap.add_argument("--jev-concurrency", type=int, default=2)
+    ap.add_argument("--set", choices=("markets", "games"), default="markets")
     args = ap.parse_args()
+    if args.set == "games":
+        return run_games(args)
     snap_path = args.snapshot or latest_snapshot()
     snap = json.loads(snap_path.read_text())
     today = snap["fetched_at"][:10]

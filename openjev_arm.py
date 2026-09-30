@@ -41,3 +41,24 @@ def ask(st: dict[str, str]) -> tuple[float, list[float]]:
            "instructions": SCORE_INSTR + RUBRIC_MARK + json.dumps({lb: text for lb, (text, _) in zip(labels, BINS)})}]
     noul, score = _load().decide(json.dumps(st, ensure_ascii=False), qs)
     return noul["noul"], [score["probabilities"][lb] for lb in labels]
+
+
+def ask_questions(st: dict[str, str], qs: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Answer Jev-format questions ({name: noul or score}) with openjev. noul -> P(yes); score -> probabilities in
+    criteria order."""
+    from openjev_decide import RUBRIC_MARK
+    names, oj = list(qs), []
+    for name in names:
+        q = qs[name]
+        if q["type"] == "noul":
+            rub = {"no": q["criteria"]["false"], "yes": q["criteria"]["true"]}
+            oj.append({"type": "noul", "options": ["no", "yes"], "instructions": q["instructions"] + RUBRIC_MARK + json.dumps(rub)})
+        else:
+            labels = [str(i) for i in range(len(q["criteria"]))]
+            oj.append({"type": "score", "options": labels,
+                       "instructions": q["instructions"] + RUBRIC_MARK + json.dumps(dict(zip(labels, q["criteria"])))})
+    answers = _load().decide(json.dumps(st, ensure_ascii=False), oj)
+    out: dict[str, Any] = {}
+    for name, q, a in zip(names, oj, answers):
+        out[name] = a["noul"] if q["type"] == "noul" else [a["probabilities"][lb] for lb in q["options"]]
+    return out
