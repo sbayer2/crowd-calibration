@@ -66,3 +66,34 @@ post-cutoff before scoring them.**
   below 60.
 - Agreement with the market is not accuracy: nothing has resolved yet.
 - The Jev alias is unpinned.
+
+---
+
+## C-002 — Screening: Jev mostly flags its own uninformed disagreements — EXPLORATORY (after the data)
+
+**Date.** 2026-09-30. Same snapshot and runs as C-001. Not pre-registered: these questions were asked after seeing
+C-001, as candidate uses of a Jev-like model against a market. None can be scored for accuracy until markets
+resolve.
+
+- **Screening mechanics.** Jev differs from the market by 0.15 or more on 31 of 60 markets. On **28 of those 31**,
+  its spread is above 0.12: it flags the disagreement as uncertain. Only **3** are confident disagreements (gap ≥ 0.15,
+  spread ≤ 0.12), which are what a screener would pass on for checking:
+
+  | Question | Price | Jev | Spread | Closes |
+  |---|---|---|---|---|
+  | Missouri enacts a data center moratorium by end of 2027 | 0.385 | 0.08 | 0.08 | 2028-01-01 |
+  | Indiana enacts a data center moratorium by end of 2027 | 0.295 | 0.09 | 0.08 | 2028-01-01 |
+  | Democrats win the 2028 US presidential election | 0.645 | 0.48 | 0.09 | 2028-11-08 |
+
+  Whether these are mispricings or gaps in Jev's knowledge (state bills introduced after its training cutoff) is
+  unknown until they resolve. **The thresholds 0.15 and 0.12 were chosen after the data.**
+- **Thin crowds.** Liquidity against the size of the disagreement: Spearman −0.47 (one-sided p < 0.001). Jev
+  disagrees more with less-liquid markets. **This is confounded:** the less-liquid markets here are mostly the
+  0.85-0.95 tail (House seats, the F1 title, Iran's leadership), which are also the questions that need
+  post-cutoff news. The smallest market had $49k liquidity, so truly thin markets were not tested.
+- **Combining Jev with the market.** Not testable without outcomes.
+
+**Reading.** Jev largely knows when it does not know. That is a property a screener needs, but it is not evidence
+that screening pays. Experiment 2 (games resolving nightly) can test it faster: do Jev's confident disagreements
+beat the market after costs? A test with thresholds fixed in advance belongs in a pre-registration before that
+analysis is run.
