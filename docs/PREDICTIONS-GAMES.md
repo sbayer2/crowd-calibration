@@ -42,3 +42,38 @@ games over the week:
 - Jev vs the market will almost certainly stay inside the CI.
 
 **If n < 80, counts are reported, not verdicts.** Winner-picking counts are descriptive only.
+
+---
+
+## Amendment 2026-09-30 (20:31 UTC) — the screener test, before any game has resolved
+
+Written and pushed before the first day-1 game starts (21:00 UTC) and before any outcome exists. **Disclosure:** the
+thresholds were set with day 1's Jev answers visible (spread median 0.070, range 0.046-0.139; gaps to the market
+median 0.053), but with no outcome known.
+
+**Hypothesis (from exploratory C-002).** A decision model that disagrees with the market *confidently* is a useful
+screener, while one that disagrees *unsurely* is not.
+
+**Definitions** (Jev, per game, mean of 3 runs):
+- **Disagreement:** gap = Jev `p_a` − price, with |gap| ≥ 0.08.
+- **Confident disagreement:** a disagreement with Jev `spread` ≤ 0.07.
+- **Unsure disagreement:** a disagreement with `spread` > 0.07.
+
+**Bet on Jev's side**, $1 stake per flagged game, at the frozen quotes, so the bid-ask spread counts as a cost:
+- if gap > 0, buy team A at the `ask`;
+- if gap < 0, buy team B at 1 − `bid`;
+- payout is $1 if that side wins; profit = payout − cost.
+
+**Measures**, reported for confident and unsure disagreements separately, pooled over all resolved days:
+- number of flags and wins;
+- mean profit per $1 with a bootstrap 95% CI;
+- Brier(Jev) − Brier(market) on that subset.
+
+**Predictions.**
+- **S1 — Confident disagreements do not beat the market.** Mean profit per $1 ≤ 0, or a CI that includes 0. The
+  screener hypothesis is **supported** only if the confident group's CI lies entirely above 0.
+- **S2 — Confident beats unsure.** Mean profit on confident disagreements exceeds that on unsure ones. Reported as a
+  difference with a CI; this is the central claim of the screener idea.
+- **Power.** About 4 disagreements per 11 games on day 1, so about 15-30 flags per week, split across two groups.
+  **With fewer than 20 flags per group, only counts are reported, not verdicts.** The test is expected to need several
+  weeks.

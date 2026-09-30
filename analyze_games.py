@@ -97,6 +97,36 @@ def main() -> None:
         print(f"  picked the winner: {picks} of {sum(pi != 0.5 for pi in p)}")
     mk = sum((pi > 0.5) == bool(yi) for pi, yi in zip(price, y) if pi != 0.5)
     print(f"\nmarket picked the winner: {mk} of {sum(pi != 0.5 for pi in price)}")
+    if "jev" in arms:
+        screener(rows)
+
+
+
+def screener(rows: list[dict], arm: str = "jev", gap_min: float = 0.08, spread_max: float = 0.07) -> None:
+    """PREDICTIONS-GAMES amendment (screener): bet $1 on Jev's side of each disagreement at the frozen quotes."""
+    rng = random.Random(0)
+    groups: dict[str, list[float]] = {"confident": [], "unsure": []}
+    subsets: dict[str, list[dict]] = {"confident": [], "unsure": []}
+    for r in rows:
+        gap = r[f"{arm}_p_a"] - r["price"]
+        if abs(gap) < gap_min:
+            continue
+        cost = r["ask"] if gap > 0 else 1 - r["bid"]
+        won = r["y"] == 1 if gap > 0 else r["y"] == 0
+        g = "confident" if r[f"{arm}_spread"] <= spread_max else "unsure"
+        groups[g].append((1.0 if won else 0.0) - cost)
+        subsets[g].append(r)
+    print(f"\nScreener ({arm}; |gap| >= {gap_min}, confident = spread <= {spread_max}; $1 on Jev's side at frozen quotes)")
+    for g, profits in groups.items():
+        if not profits:
+            print(f"  {g:9} no flags yet")
+            continue
+        boots = sorted(statistics.mean(rng.choice(profits) for _ in profits) for _ in range(2000))
+        sub = subsets[g]
+        db = brier([r[f"{arm}_p_a"] for r in sub], [r["y"] for r in sub]) - brier([r["price"] for r in sub], [r["y"] for r in sub])
+        verdict = "counts only (n < 20)" if len(profits) < 20 else ("CI above 0" if boots[50] > 0 else "CI includes or below 0")
+        print(f"  {g:9} flags {len(profits):3}  wins {sum(p > 0 for p in profits):3}  profit/$1 {statistics.mean(profits):+.3f} "
+              f"[{boots[50]:+.3f}, {boots[1949]:+.3f}]  Brier(Jev)-Brier(market) {db:+.3f}  -> {verdict}")
 
 
 if __name__ == "__main__":
