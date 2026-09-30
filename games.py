@@ -53,14 +53,29 @@ def parse_time(s: str) -> dt.datetime | None:
         return None
 
 
+def frozen_before() -> set[str]:
+    """Game ids already in an earlier snapshot. A game is frozen and answered once, so no day counts it twice."""
+    ids: set[str] = set()
+    for p in (ROOT / "runs").glob("games-2*.json"):
+        if not p.stem.endswith("resolved"):
+            ids |= {g["id"] for g in json.loads(p.read_text())["games"]}
+    return ids
+
+
 def games(hours: float, now: dt.datetime) -> tuple[list[dict[str, Any]], Counter]:
-    seen, out, dropped = set(), [], Counter()
+    earlier, seen, out, dropped = frozen_before(), set(), [], Counter()
     for tag in SPORTS:
         for ev in fetch_events(tag):
             for m in ev.get("markets", []):
-                if m.get("sportsMarketType") != "moneyline" or m["id"] in seen:
+                if m.get("sportsMarketType") != "moneyline":
                     continue
-                seen.add(m["id"])
+                mid = str(m["id"])
+                if mid in seen:           # the same market listed under two sport tags
+                    continue
+                seen.add(mid)
+                if mid in earlier:
+                    dropped["already frozen"] += 1
+                    continue
                 start = parse_time(m.get("gameStartTime") or "")
                 teams = json.loads(m.get("outcomes") or "[]")
                 if start is None or len(teams) != 2:
