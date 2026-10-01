@@ -18,3 +18,16 @@ Each daily freeze is recorded here when the models have answered, before the fir
 | 10-01 23:00 | NHL | Sabres vs Blue Jackets | 0.515 | 0.568 | 0.08 | 0.804 | Sabres |
 | 10-01 23:00 | NHL | Lightning vs Rangers | 0.565 | 0.542 | 0.05 | 0.617 | Lightning |
 | 10-01 23:00 | NHL | Flyers vs Devils | 0.415 | 0.513 | 0.05 | 0.748 | Flyers |
+
+## 2026-10-01T03:41 UTC — snapshot games-20261001-034155, 8 games; answered before the first start (2026-10-01T17:00 UTC)
+
+| Start (UTC) | League | Game (A vs B) | Market P(A) | Jev P(A) | Jev spread | openjev P(A) | Jev favours |
+|---|---|---|---|---|---|---|---|
+| 10-01 17:00 | WNBA | Indiana Fever vs Las Vegas Aces | 0.375 | 0.397 | 0.15 | 0.608 | Las Vegas Aces |
+| 10-01 18:00 | MLB | Philadelphia Phillies vs Atlanta Braves | 0.505 | 0.533 | 0.08 | 0.664 | Philadelphia Phillies |
+| 10-02 00:00 | NHL | Wild vs Predators | 0.565 | 0.507 | 0.07 | 0.693 | Wild |
+| 10-02 00:15 | NFL | Steelers vs Browns | 0.575 | 0.580 | 0.10 | 0.740 | Steelers |
+| 10-02 01:00 | NHL | Kraken vs Flames | 0.485 | 0.492 | 0.07 | 0.706 | Flames |
+| 10-02 01:30 | NHL | Blackhawks vs Utah | 0.345 | 0.532 | 0.10 | 0.758 | Blackhawks |
+| 10-02 02:00 | NHL | Oilers vs Canucks | 0.645 | 0.530 | 0.06 | 0.674 | Oilers |
+| 10-02 02:00 | NHL | Panthers vs Sharks | 0.575 | 0.585 | 0.09 | 0.641 | Panthers |
