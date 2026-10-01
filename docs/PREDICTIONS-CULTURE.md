@@ -21,3 +21,7 @@ side of 50%.
   Jev is no worse than the crowd. Brier gap within ±0.03, reported as counts unless n ≥ 40.
 - **K3.** Jev and the crowd fall on the same side of 50% on at least 70% of options. Most options are long shots both
   will reject.
+
+**Amendment (2026-10-01, after Jev answered, before any outcome).** Options named like Polymarket's unfilled
+placeholder slots ("Song A", "Song 1", "Album B") are excluded from every score. They are not real choices and always
+resolve No. Jev's answers on them are kept in the run files.

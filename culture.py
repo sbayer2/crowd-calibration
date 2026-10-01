@@ -19,6 +19,7 @@ import argparse
 import datetime as dt
 import glob
 import json
+import re
 import statistics
 import time
 import urllib.request
@@ -33,6 +34,11 @@ TAGS = ("celebrities", "celebrity", "music", "spotify", "youtube", "mrbeast", "m
         "reality-tv", "tv", "podcast", "netflix", "gaming", "twitch", "taylor-swift", "album")
 MIN_LEAD, MAX_DAYS, MAX_WIDE = dt.timedelta(minutes=20), 8, 0.10
 RUNS = 3
+PLACEHOLDER = re.compile(r"^(Song|Album|Artist|Movie|Option) ([A-Z]|\d{1,2})$")   # unfilled slots Polymarket pads lists with
+
+
+def scorable(option: str) -> bool:
+    return not PLACEHOLDER.match(option)
 
 
 def get(url: str) -> Any:
@@ -175,13 +181,14 @@ def compare() -> None:
                       f"({jev[jp['market_id']]:.0%})   {'agree' if cp is jp else 'DISAGREE'}" + (f"   -> {win}" if win else ""))
             else:
                 crowd = {o["market_id"]: o["crowd"] for o in e["options"]}
-            for o in sorted(e["options"], key=lambda o: -crowd[o["market_id"]])[:12]:
+            for o in sorted((o for o in e["options"] if scorable(o["option"])), key=lambda o: -crowd[o["market_id"]])[:12]:
                 mid = o["market_id"]
                 out = res.get(mid)
                 flag = "" if (crowd[mid] >= 0.5) == (jev[mid] >= 0.5) else "  <- split"
                 print(f"     {o['option'][:34]:34} crowd {crowd[mid]:4.0%}  Jev {jev[mid]:4.0%}"
                       + (f"  outcome {'YES' if out else 'no'}" if out is not None else "") + flag)
-                rows.append((crowd[mid], jev[mid], out))
+                if scorable(o["option"]):
+                    rows.append((crowd[mid], jev[mid], out))
     scored = [(c, j, y) for c, j, y in rows if y is not None]
     agree = sum((c >= 0.5) == (j >= 0.5) for c, j, _ in rows)
     print(f"\n{len(rows)} options: Jev and the crowd on the same side of 50% on {agree}; {len(scored)} resolved")
