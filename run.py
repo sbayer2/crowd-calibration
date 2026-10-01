@@ -75,6 +75,35 @@ def run_games(args) -> None:
             print(f"{arm} run{k}: {len(gs)} games in {time.time() - t0:.0f}s -> {out.name}", flush=True)
 
 
+def run_history(args) -> None:
+    """Experiment 4: each resolved market asked as of its horizon date (7 days before it closed), blind to the result.
+    openjev answers every k-th market per window (deterministic subsample, --openjev-per-window)."""
+    path = args.snapshot or sorted((ROOT / "runs").glob("history-2*.json"))[-1]
+    snap = json.loads(path.read_text())
+    ms = snap["markets"][: args.limit]
+    for arm in args.arms.split(","):
+        todo = ms
+        if arm == "openjev":
+            by: dict[str, list] = {}
+            for m in ms:
+                by.setdefault(m["window"], []).append(m)
+            todo = [m for w in by.values() for m in w[:: max(1, -(-len(w) // args.openjev_per_window))]]
+        fn = ask_jev if arm == "jev" else ask_openjev
+        for k in range(1, RUNS[arm] + 1):
+            out = ROOT / "runs" / f"{arm}-history-{snap['stamp']}{'-' + args.tag if args.tag else ''}-run{k}.json"
+            done = json.loads(out.read_text())["answers"] if out.exists() else {}
+            rest = [m for m in todo if m["id"] not in done]
+            t0 = time.time()
+            with ThreadPoolExecutor(args.jev_concurrency if arm == "jev" else 1) as pool:
+                for m, a in zip(rest, pool.map(lambda m: fn(state(m, m["horizon_at"][:10])), rest)):
+                    done[m["id"]] = {**a, **summarise_bins(a["bins"])}
+                    if arm == "openjev" and len(done) % 20 == 0:      # resumable: save as it goes
+                        out.write_text(json.dumps({"arm": arm, "run": k, "snapshot": path.name, "answers": done}))
+            out.write_text(json.dumps({"arm": arm, "run": k, "snapshot": path.name,
+                                       "date": time.strftime("%Y-%m-%d %H:%M:%S"), "answers": done}, indent=1))
+            print(f"{arm} run{k}: {len(done)} of {len(todo)} markets ({len(rest)} new) in {time.time() - t0:.0f}s -> {out.name}", flush=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--snapshot", type=Path)
@@ -82,10 +111,13 @@ def main() -> None:
     ap.add_argument("--limit", type=int)
     ap.add_argument("--tag", default="")
     ap.add_argument("--jev-concurrency", type=int, default=2)
-    ap.add_argument("--set", choices=("markets", "games"), default="markets")
+    ap.add_argument("--set", choices=("markets", "games", "history"), default="markets")
+    ap.add_argument("--openjev-per-window", type=int, default=30)
     args = ap.parse_args()
     if args.set == "games":
         return run_games(args)
+    if args.set == "history":
+        return run_history(args)
     snap_path = args.snapshot or latest_snapshot()
     snap = json.loads(snap_path.read_text())
     today = snap["fetched_at"][:10]
