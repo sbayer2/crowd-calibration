@@ -181,14 +181,15 @@ def compare() -> None:
                       f"({jev[jp['market_id']]:.0%})   {'agree' if cp is jp else 'DISAGREE'}" + (f"   -> {win}" if win else ""))
             else:
                 crowd = {o["market_id"]: o["crowd"] for o in e["options"]}
-            for o in sorted((o for o in e["options"] if scorable(o["option"])), key=lambda o: -crowd[o["market_id"]])[:12]:
+            ranked = sorted((o for o in e["options"] if scorable(o["option"])), key=lambda o: -crowd[o["market_id"]])
+            for rank, o in enumerate(ranked):
                 mid = o["market_id"]
                 out = res.get(mid)
-                flag = "" if (crowd[mid] >= 0.5) == (jev[mid] >= 0.5) else "  <- split"
-                print(f"     {o['option'][:34]:34} crowd {crowd[mid]:4.0%}  Jev {jev[mid]:4.0%}"
-                      + (f"  outcome {'YES' if out else 'no'}" if out is not None else "") + flag)
-                if scorable(o["option"]):
-                    rows.append((crowd[mid], jev[mid], out))
+                rows.append((crowd[mid], jev[mid], out))             # every scorable option is scored
+                if rank < 12:                                       # only the top 12 are printed
+                    flag = "" if (crowd[mid] >= 0.5) == (jev[mid] >= 0.5) else "  <- split"
+                    print(f"     {o['option'][:34]:34} crowd {crowd[mid]:4.0%}  Jev {jev[mid]:4.0%}"
+                          + (f"  outcome {'YES' if out else 'no'}" if out is not None else "") + flag)
     scored = [(c, j, y) for c, j, y in rows if y is not None]
     agree = sum((c >= 0.5) == (j >= 0.5) for c, j, _ in rows)
     print(f"\n{len(rows)} options: Jev and the crowd on the same side of 50% on {agree}; {len(scored)} resolved")
