@@ -97,3 +97,90 @@ resolve.
 that screening pays. Experiment 2 (games resolving nightly) can test it faster: do Jev's confident disagreements
 beat the market after costs? A test with thresholds fixed in advance belongs in a pre-registration before that
 analysis is run.
+
+---
+
+## H-001 — The seams study: Jev's knowledge thins after spring 2025; no memory of surprises; confidence is mostly mechanical
+
+**Date.** 2026-10-02. Sample `runs/history-20261001-212350.json`: 1,125 binary Polymarket markets resolved 2023 Q1
+to 2026-10-01 (20 after Jev's release). The crowd = the Yes price 7 days before close. Jev: 3 runs on all 1,125.
+openjev: 1 run on 359 (about 30 per quarter). Both blind to price and outcome. Predictions H1-H6 pre-registered in
+`docs/PREDICTIONS-HISTORY.md` (d1008d0) before any model answer.
+
+**Seam 1 — accuracy by the quarter the market closed (AUC against the outcome):**
+
+| Quarter | n | Crowd | Jev | openjev |
+|---|---:|---:|---:|---:|
+| 2024 Q1 / Q2 / Q3 / Q4 | 100 each | 0.94 / 0.96 / 0.96 / 0.93 | **0.91 / 0.80 / 0.87 / 0.69** | 0.96 / 0.68 / 0.46 / 0.71 |
+| 2025 Q1 | 100 | 0.98 | **0.83** | 0.62 |
+| 2025 Q2 / Q3 / Q4 | 100 / 62 / 100 | 0.93 / 0.94 / 0.92 | **0.64 / 0.64 / 0.63** | 0.74 / 0.53 / 0.62 |
+| 2026 Q1 / Q2 | 93 / 100 | 0.95 / 0.90 | **0.66 / 0.60** | 0.49 / 0.74 |
+| 2026 Q3 before release | 62 | 0.96 | 0.79 | 0.75 |
+| After release (2026-09-15) | 20 | 0.92 | 0.84 | 0.64 |
+
+Brier: crowd 0.090 against Jev 0.164 pre-release (openjev 0.228 on its subsample); coin flip 0.250.
+
+**Predictions.**
+- **H1 held.** Jev's 2024 AUC (mean about 0.82) exceeds its 2026 Q1-Q2 AUC (about 0.63) by about 0.19; the crowd
+  varies by less than 0.05. **The drop sits between 2025 Q1 (0.83) and 2025 Q2 (0.64)** and stays down. That is
+  outside evidence of where Jev's knowledge thins out. Caveats:
+  - the two latest windows (2026 Q3 before release, after release; n = 62 and 20) recover to 0.79 and 0.84;
+  - each quarter's topic mix and Yes rate differ.
+
+  So the date is approximate.
+- **H2 held.** Where the crowd was confidently wrong 7 days out (n = 56), Jev sided with the outcome on 5 (9%), with
+  mean P(outcome) 0.26. Where the crowd was confidently right (n = 845), Jev agreed with the outcome on 86%. Jev
+  forecasts in the crowd's direction, surprises included. There is **no sign of memorised outcomes**, against the
+  "trained on resolved markets" hypothesis, at least for the cases that matter.
+- **H3 held.** Jev's Brier is worse than the crowd's in every window with n ≥ 50.
+- **H4 split.** Among 732 pre-release longshots (price < 0.15):
+
+  | | Mean |
+  |---|---|
+  | Crowd price | 0.023 |
+  | **Actually happened** | **0.052** |
+  | Jev | 0.219 |
+
+  - **Failed:** the market *under*priced longshots, the opposite of the predicted favourite-longshot bias.
+  - **Held:** Jev overprices them far more than the crowd does.
+- **H5 failed** as written.
+
+  | Jev says | Happened |
+  |---|---|
+  | 0.11 | 0.13 |
+  | 0.29 | 0.27 |
+  | 0.49 | 0.36 |
+  | 0.69 | 0.54 |
+  | 0.88 | 0.97 |
+
+  Jev is well calibrated at the low end, says yes too readily in the middle, and is too cautious at the top. That is
+  not the symmetric compression predicted.
+- **H6 held, weakly.** On the surprises (n = 19), openjev put more than 0.5 on the outcome in 7 (37%), but its
+  forecasts sit near 0.5 throughout (mean P(outcome) 0.48; overall AUC 0.63; agreement with price ρ 0.22). It
+  barely forecasts, so it shows no clear seam either.
+
+**Correction: confidence vs error (exploratory, after the data).** The raw link between Jev's spread and its
+error against the outcome is ρ +0.66. But spread is almost a function of how extreme the forecast is (ρ −0.85).
+Controlling for that:
+
+| | Partial ρ |
+|---|---|
+| All 1,125 | **+0.04** (p = 0.0005, but negligible) |
+| Contested markets (crowd 0.15-0.85, n = 265) | raw +0.04, partial +0.01, p = 0.43 |
+
+**This revises C-001 (M3) and C-002.**
+- M3's "confidence tracks error" was measured against the *market price*, on 60 markets, and survived a similar
+  control (+0.53).
+- Against **outcomes**, on 1,125 markets, it nearly vanishes.
+- Jev's uncertainty mostly mirrors how extreme its answer is. It is not an independent signal of when it is wrong.
+- The screener hypothesis therefore lacks support on outcomes. Its live test in experiment 2 is 1 win in 4
+  confident flags so far.
+
+**Reading.**
+- Jev's agreement with prediction markets looks like **world knowledge up to about spring 2025**, applied with
+  roughly honest but not self-aware uncertainty.
+- It is not a memory of market answers, and not crowd wisdom beyond shared knowledge.
+- **Open questions:**
+  - Why does the seam fall in spring 2025?
+  - Why is Jev over-eager in the middle of the scale?
+  - Why do markets underprice longshots in this sample?

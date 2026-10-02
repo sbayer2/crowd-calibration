@@ -92,12 +92,12 @@ def run_history(args) -> None:
         for k in range(1, RUNS[arm] + 1):
             out = ROOT / "runs" / f"{arm}-history-{snap['stamp']}{'-' + args.tag if args.tag else ''}-run{k}.json"
             done = json.loads(out.read_text())["answers"] if out.exists() else {}
-            rest = [m for m in todo if m["id"] not in done]
+            rest = [m for m in todo if m["id"] not in done][: args.max_new]
             t0 = time.time()
             with ThreadPoolExecutor(args.jev_concurrency if arm == "jev" else 1) as pool:
                 for m, a in zip(rest, pool.map(lambda m: fn(state(m, m["horizon_at"][:10])), rest)):
                     done[m["id"]] = {**a, **summarise_bins(a["bins"])}
-                    if arm == "openjev" and len(done) % 20 == 0:      # resumable: save as it goes
+                    if len(done) % 25 == 0:                           # resumable: save as it goes
                         out.write_text(json.dumps({"arm": arm, "run": k, "snapshot": path.name, "answers": done}))
             out.write_text(json.dumps({"arm": arm, "run": k, "snapshot": path.name,
                                        "date": time.strftime("%Y-%m-%d %H:%M:%S"), "answers": done}, indent=1))
@@ -113,6 +113,7 @@ def main() -> None:
     ap.add_argument("--jev-concurrency", type=int, default=2)
     ap.add_argument("--set", choices=("markets", "games", "history"), default="markets")
     ap.add_argument("--openjev-per-window", type=int, default=30)
+    ap.add_argument("--max-new", type=int, help="history: answer at most this many new markets per run file, then stop")
     args = ap.parse_args()
     if args.set == "games":
         return run_games(args)
