@@ -40,3 +40,12 @@ Each daily freeze is recorded here when the models have answered, before the fir
 | 10-02 23:00 | NHL | Capitals vs Hurricanes | 0.405 | 0.500 | 0.05 | 0.676 | Hurricanes |
 | 10-03 00:00 | NHL | Bruins vs Jets | 0.475 | 0.528 | 0.07 | 0.738 | Bruins |
 | 10-03 02:00 | NHL | Ducks vs Golden Knights | 0.375 | 0.427 | 0.08 | 0.677 | Golden Knights |
+
+## 2026-10-02T14:08 UTC — snapshot games-20261002-140852, 4 games; answered before the first start (2026-10-03T01:00 UTC)
+
+| Start (UTC) | League | Game (A vs B) | Market P(A) | Jev P(A) | Jev spread | openjev P(A) | Jev favours |
+|---|---|---|---|---|---|---|---|
+| 10-03 01:00 | NHL | Blues vs Stars | 0.365 | 0.493 | 0.06 | 0.722 | Stars |
+| 10-03 01:00 | WNBA | Dallas Wings vs Golden State Valkyries | 0.245 | 0.495 | 0.11 | 0.523 | Golden State Valkyries |
+| 10-03 17:00 | MLB | Chicago White Sox vs Cleveland Guardians | 0.425 | 0.382 | 0.13 | 0.599 | Cleveland Guardians |
+| 10-03 20:00 | MLB | Atlanta Braves vs Los Angeles Dodgers | 0.345 | 0.448 | 0.10 | 0.612 | Los Angeles Dodgers |
