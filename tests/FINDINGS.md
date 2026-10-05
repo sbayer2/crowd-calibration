@@ -184,3 +184,63 @@ Controlling for that:
   - Why does the seam fall in spring 2025?
   - Why is Jev over-eager in the middle of the scale?
   - Why do markets underprice longshots in this sample?
+
+---
+
+## B-001 — Experiment 5: prompt changes alone do not improve blind Jev on Braves games; Jev and the market tie a "good team" baseline
+
+**Date.** 2026-10-05. 172 Braves moneyline games this season, priced on Polymarket and resolved. Market =
+the price 5 minutes before first pitch. Tuning set: 41 games (2026-08-19 to 10-05), including the 26 examined
+earlier. Hold-out: 131 games (2026-03-20 to 08-18), untouched until one final run. Plan, variants, selection rule
+and predictions B1-B4 committed before any variant ran (4d48de2). Prompt-only: Jev never saw prices, results,
+standings, pitchers or home/away facts.
+
+**Tuning set (41 games; the market picked 23/41 right, Brier 0.243):**
+
+| Variant | Picks right | Brier, raw | Brier, fitted | ρ with market |
+|---|---|---|---|---|
+| V0 plain yes/no | 15 | 0.256 | 0.253 | +0.48 |
+| V1 both sides | 18 | 0.255 | 0.252 | +0.42 |
+| V2 neutral two-team choice, both orders | 18 | 0.346 | 0.280 | +0.29 |
+| **V3 probability bins, both sides** | 18 | 0.251 | **0.250** | +0.36 |
+| V4 forced 60/40, both framings | 16 | 0.309 | 0.268 | +0.43 |
+| V5 "typical strength" instruction | 18 | 0.423 | 0.305 | +0.39 |
+| V6 composite strength Scores (docs pattern) | 18 | 0.330 | 0.280 | +0.51 |
+
+- Every variant's fitted confidence slope hit the grid floor (k = 0.5): on tuning, Jev's opinion was best shrunk
+  toward 50%.
+- The variants without named-team framing (V2, V5, V6) commit harder and score worse.
+- V6 tracks the market best (ρ +0.51) but is badly calibrated.
+- **V3 was selected** by lowest fitted Brier.
+
+**Hold-out (131 games, one run):**
+
+| | Picks right | Brier |
+|---|---|---|
+| Polymarket | 80 (61%) | 0.243 |
+| Jev V3, raw | 78 (60%) | 0.242 |
+| Jev V3, fitted | 78 (60%) | 0.245 |
+| Coin flip | — | 0.250 |
+| Always pick the Braves | 78 (60%) | — |
+| Constant "Braves 60%" | — | about 0.241 |
+
+- Brier(Jev fitted) − Brier(market) = **+0.002**, 95% bootstrap CI [−0.009, +0.013]: indistinguishable.
+- Jev's forecasts span 0.48-0.63 and lean Braves almost every game. Its picks equal "always pick the Braves". The
+  Braves went 78-53 in this half.
+- The market beats a coin flip on picks (80/131, p = 0.007), but not the constant base-rate forecast.
+
+**Predictions.**
+- **B1:** directionally true (0.245 vs 0.243), not significant.
+- **B2 held:** Jev 60%, the market 61%.
+- **B3 failed:** the numeric-bins variant was selected, by staying closest to 0.5.
+- **B4 failed:** neutral wording scored worse than the plain question.
+
+**Reading.**
+- Without game information, prompt changes alter how boldly Jev states a team-reputation prior, not what it knows.
+- Over half a season, that prior was about as good as the market on single games, because the Braves were good and
+  single games are close to coin flips. The market's per-game information did not show up as a measurable Brier
+  edge in 131 games.
+- When the Braves were average (tuning, mid-August onward), the same prior looked bad.
+
+**Limits.** One team. The hold-out may include up to 5 spring-training games before March 26. The tuning and
+hold-out periods differ in the Braves' form, so the selected variant's tuning advantage reflects that period.
