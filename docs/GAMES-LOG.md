@@ -49,3 +49,26 @@ Each daily freeze is recorded here when the models have answered, before the fir
 | 10-03 01:00 | WNBA | Dallas Wings vs Golden State Valkyries | 0.245 | 0.495 | 0.11 | 0.523 | Golden State Valkyries |
 | 10-03 17:00 | MLB | Chicago White Sox vs Cleveland Guardians | 0.425 | 0.382 | 0.13 | 0.599 | Cleveland Guardians |
 | 10-03 20:00 | MLB | Atlanta Braves vs Los Angeles Dodgers | 0.345 | 0.448 | 0.10 | 0.612 | Los Angeles Dodgers |
+
+## 2026-10-05T17:36 UTC — snapshot games-20261005-173627, 18 games; answered before the first start (2026-10-05T21:00 UTC)
+
+| Start (UTC) | League | Game (A vs B) | Market P(A) | Jev P(A) | Jev spread | openjev P(A) | Jev favours |
+|---|---|---|---|---|---|---|---|
+| 10-05 21:00 | MLB | Chicago White Sox vs Cleveland Guardians | 0.415 | 0.400 | 0.12 | 0.593 | Cleveland Guardians |
+| 10-05 23:00 | NHL | Flyers vs Lightning | 0.335 | 0.457 | 0.06 | 0.699 | Lightning |
+| 10-05 23:00 | NBA | Grizzlies vs Hawks | 0.405 | 0.538 | 0.05 | 0.667 | Grizzlies |
+| 10-05 23:00 | NBA | Suns vs Pistons | 0.425 | 0.663 | 0.14 | 0.644 | Suns |
+| 10-05 23:00 | NBA | Knicks vs 76ers | 0.485 | 0.538 | 0.05 | 0.651 | Knicks |
+| 10-05 23:30 | NHL | Jets vs Penguins | 0.375 | 0.515 | 0.05 | 0.504 | Jets |
+| 10-05 23:30 | NHL | Senators vs Bruins | 0.525 | 0.440 | 0.07 | 0.527 | Bruins |
+| 10-06 00:00 | MLB | New York Yankees vs Tampa Bay Rays | 0.525 | 0.583 | 0.10 | 0.753 | New York Yankees |
+| 10-06 00:00 | NHL | Sharks vs Stars | 0.345 | 0.480 | 0.06 | 0.633 | Stars |
+| 10-06 00:00 | NBA | Timberwolves vs Bucks | 0.665 | 0.475 | 0.08 | 0.639 | Bucks |
+| 10-06 00:15 | NFL | Falcons vs Saints | 0.475 | 0.518 | 0.07 | 0.573 | Falcons |
+| 10-06 02:00 | NBA | Lakers vs Kings | 0.655 | 0.570 | 0.08 | 0.771 | Lakers |
+| 10-06 22:00 | MLB | Los Angeles Dodgers vs Atlanta Braves | 0.495 | 0.577 | 0.08 | 0.687 | Los Angeles Dodgers |
+| 10-06 23:00 | NHL | Predators vs Maple Leafs | 0.415 | 0.432 | 0.07 | 0.604 | Maple Leafs |
+| 10-06 23:00 | NHL | Utah vs Devils | 0.455 | 0.505 | 0.06 | 0.605 | Utah |
+| 10-06 23:00 | NHL | Hurricanes vs Canadiens | 0.535 | 0.593 | 0.09 | 0.588 | Hurricanes |
+| 10-06 23:00 | NHL | Senators vs Red Wings | 0.515 | 0.508 | 0.05 | 0.648 | Senators |
+| 10-06 23:00 | NHL | Wild vs Sabres | 0.505 | 0.543 | 0.06 | 0.667 | Wild |
