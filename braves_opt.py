@@ -253,7 +253,7 @@ def run(iterations: int) -> None:
     while True:
         top = ranked(pop, y, market)[:TOPK]
         short = [e for e in top if len(e["runs"]) < RERUNS]
-        if short:                                                     # confirm top configs with fresh runs first
+        if short and len(pop) >= SEEDS:                               # after the seeds, confirm top configs with fresh runs
             record(short[0]["cfg"], short[0]["iteration"], f"rerun {len(short[0]['runs']) + 1}")
             continue
         if len(pop) >= iterations:
