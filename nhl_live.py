@@ -108,8 +108,11 @@ def tick() -> None:
     t = now()
     st = load("state.json", {"events": [], "events_at": None, "done": {}, "calls": {}, "remaining": None, "jev": []})
     if not st["events_at"] or t - iso(st["events_at"]) > dt.timedelta(minutes=60):
-        st["events"], _ = odds_api("events")                                          # free
-        st["events_at"] = t.isoformat()
+        try:
+            st["events"], _ = odds_api("events")                                      # free
+            st["events_at"] = t.isoformat()
+        except OSError as exc:                                                         # network gap: keep the cached schedule
+            print(f"{t:%H:%M} schedule refresh failed ({exc}); using cache from {st['events_at']}")
     ahead = [e for e in st["events"] if dt.timedelta(0) < iso(e["commence_time"]) - t <= dt.timedelta(hours=EARLY_HORIZON_H)]
     due = []
     early_key = f"early:{t.date().isoformat()}"
@@ -122,7 +125,10 @@ def tick() -> None:
             if lo <= mins <= hi and k not in st["done"]:
                 due.append(k)
     if due:
-        snapshot(due, st, t)
+        try:
+            snapshot(due, st, t)
+        except OSError as exc:                                                         # not marked done: the next tick retries
+            print(f"{t:%H:%M} snapshot {due} failed ({exc}); will retry while the window is open")
     soon = [e for e in ahead if iso(e["commence_time"]) - t > dt.timedelta(minutes=5)]
     if soon and (early_key in st["done"] or t.hour >= EARLY_UTC_HOUR):
         try:
