@@ -406,3 +406,42 @@ hold-out periods differ in the Braves' form, so the selected variant's tuning ad
 **Open.**
 - Does Jev add anything to the market? E.g. a logistic model of the outcome on market price + Jev, cross-validated.
 - Split lower-level matches by Jev's strength level, to test whether the above-chance AUC comes from the known players.
+
+## T-002 — Jev adds nothing to the tennis market; its lower-level skill comes from the players it recognises — EXPLORATORY (after the data)
+
+**Not pre-registered.** Run 2026-10-06 on the T-001 data (`tennis_jev.py extras`); no new Jev calls.
+
+**1. Does Jev add to the market?**
+- Method: a logistic model of the outcome on logit(market price), with and without Jev's number (standardised).
+  Scored out of fold over 4 chronological folds, with a paired bootstrap of the log-loss difference.
+- **Tour-level:**
+  - Market price as is: 0.5551. Refitted: 0.5572.
+  - Adding Jev changes log loss by +0.0000 to +0.0033 depending on type; every CI includes 0.
+  - Jev's weight is small and positive in most folds and changes sign in one. No gain.
+- **Lower-level:**
+  - Refitting the market improves it (0.6118 → 0.6033). Lower-level prices are less well calibrated than tour-level
+    ones.
+  - Adding Jev changes log loss by −0.0003 to +0.0007; every CI includes 0.
+- Reading: the market already contains whatever Jev knows about the players.
+
+**2. Screener: Jev and the market favour different players** (yes/no about each player).
+
+| Tier | Disagreements | Market right | Jev right | Close markets (favourite under 60%): market right |
+|---|---|---|---|---|
+| Tour-level | 181 of 625 | 110 (61%) | 71 | 39 of 74 (53%) |
+| Lower-level | 274 of 625 | 179 (65%) | 95 | 37 of 69 (54%) |
+
+- When they disagree, the market is right about 60-65% of the time; in close markets it is about a coin flip.
+- Jev's disagreement does not flag market errors. This is consistent with the C-002 caution on the screener idea.
+
+**3. Lower-level matches, split by Jev's own strength levels.**
+
+| Group | Matches | Market AUC | Jev AUC (yes/no A, yes/no each, choice, bins) |
+|---|---|---|---|
+| At least one player Jev rates above "unknown" | 230 | 0.790 | 0.597-0.602 |
+| Jev rates both players "unknown" | 395 | 0.705 | 0.531-0.545 |
+
+- The above-chance lower-level AUC in T-001 comes mainly from matches with a player Jev recognises.
+- Where it recognises neither player, Jev is about 1 standard error above chance (SE ≈ 0.03 at n = 395).
+- Jev's strength level works as a "do I know these players?" flag that separates where it has skill from where it
+  does not.

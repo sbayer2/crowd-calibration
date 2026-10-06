@@ -188,7 +188,86 @@ def report() -> None:
                   + " ".join(f"{i}:{lv.count(i) / len(lv):.0%}" for i in range(5)))
 
 
+def logistic(X: list[list[float]], y: list[int], ridge: float = 1e-3) -> list[float]:
+    """Logistic regression by Newton's method (small ridge, intercept unpenalised)."""
+    import math
+    k, w = len(X[0]), [0.0] * len(X[0])
+    for _ in range(30):
+        g, H = [0.0] * k, [[0.0] * k for _ in range(k)]
+        for x, t in zip(X, y):
+            p = 1 / (1 + math.exp(-sum(a * b for a, b in zip(w, x))))
+            for i in range(k):
+                g[i] += (p - t) * x[i]
+                for j in range(k):
+                    H[i][j] += p * (1 - p) * x[i] * x[j]
+        for i in range(1, k):
+            g[i] += ridge * w[i]
+            H[i][i] += ridge
+        for i in range(k):                                           # solve H d = g (Gauss-Jordan; k <= 3)
+            piv = H[i][i]
+            H[i], g[i] = [v / piv for v in H[i]], g[i] / piv
+            for r in range(k):
+                if r != i:
+                    f = H[r][i]
+                    H[r], g[r] = [a - f * b for a, b in zip(H[r], H[i])], g[r] - f * g[i]
+        w = [a - b for a, b in zip(w, g)]
+    return w
+
+
+def extras() -> None:
+    """Exploratory, after T-001: does Jev add to the market, and where does lower-level skill come from?"""
+    import math
+    ms = json.loads(SAMPLE.read_text())["rows"]
+    vals = {t: {(r := json.loads(l))["id"]: r for l in (OUT / f"{t}.jsonl").open(encoding="utf-8")} for t in TYPES}
+    logit = lambda p: math.log(min(max(p, .01), .99) / (1 - min(max(p, .01), .99)))
+    ll = lambda p, t: -math.log(p if t else 1 - p)
+    rng = random.Random(SEED)
+    print("1. Does Jev add to the market? Out-of-fold log loss (4 chronological folds); delta = (market + Jev) - market")
+    for tr in ("tour", "lower"):
+        sub = [m for m in ms if m["tier"] == tr]
+        y = [m["a_won"] for m in sub]
+        print(f"  {tr}-level ({len(sub)}): market price as is {statistics.mean(ll(min(max(m['p_a'], .01), .99), t) for m, t in zip(sub, y)):.4f}")
+        for t in TYPES:
+            v = [vals[t][m["id"]]["v"] for m in sub]
+            mu, sd = statistics.mean(v), statistics.pstdev(v) or 1.0
+            X1 = [[1.0, logit(m["p_a"])] for m in sub]
+            X2 = [x + [(vi - mu) / sd] for x, vi in zip(X1, v)]
+            n, size = len(sub), -(-len(sub) // 4)
+            l1, l2, coefs = [0.0] * n, [0.0] * n, []
+            for s0 in range(0, n, size):
+                test = range(s0, min(s0 + size, n))
+                tr_i = [i for i in range(n) if not s0 <= i < s0 + size]
+                w1 = logistic([X1[i] for i in tr_i], [y[i] for i in tr_i])
+                w2 = logistic([X2[i] for i in tr_i], [y[i] for i in tr_i])
+                coefs.append(w2[2])
+                for i in test:
+                    p1 = 1 / (1 + math.exp(-sum(a * b for a, b in zip(w1, X1[i]))))
+                    p2 = 1 / (1 + math.exp(-sum(a * b for a, b in zip(w2, X2[i]))))
+                    l1[i], l2[i] = ll(p1, y[i]), ll(p2, y[i])
+            d = [b - a for a, b in zip(l1, l2)]
+            boots = sorted(statistics.mean(d[rng.randrange(n)] for _ in range(n)) for _ in range(1000))
+            print(f"    {t:12} market refit {statistics.mean(l1):.4f}  + Jev {statistics.mean(l2):.4f}  delta {statistics.mean(d):+.4f} "
+                  f"[{boots[25]:+.4f}, {boots[974]:+.4f}]  Jev weight per fold {' '.join(f'{c:+.2f}' for c in coefs)}")
+
+    print("\n2. Screener: matches where Jev (yes/no both sides, v >= 0.5) and the market (p >= 0.5) favour different players")
+    for tr in ("tour", "lower"):
+        sub = [m for m in ms if m["tier"] == tr]
+        dis = [m for m in sub if (vals["noul_both"][m["id"]]["v"] >= .5) != (m["p_a"] >= .5)]
+        mk_right = sum((m["p_a"] >= .5) == bool(m["a_won"]) for m in dis)
+        conf = [m for m in dis if max(m["p_a"], 1 - m["p_a"]) < .6]
+        print(f"  {tr}-level: {len(dis)} of {len(sub)} disagree; market right {mk_right}, Jev right {len(dis) - mk_right}"
+              f" | where the market favourite is under 60%: {len(conf)}, market right {sum((m['p_a'] >= .5) == bool(m['a_won']) for m in conf)}")
+
+    print("\n3. Lower-level matches split by Jev's strength levels (known = at least one player at level >= 0.5)")
+    sub = [m for m in ms if m["tier"] == "lower"]
+    known = lambda m: max(vals["strength"][m["id"]]["level_a"], vals["strength"][m["id"]]["level_b"]) >= .5
+    for name, grp in (("known", [m for m in sub if known(m)]), ("both unknown", [m for m in sub if not known(m)])):
+        y = [m["a_won"] for m in grp]
+        cells = " ".join(f"{t} {auc([vals[t][m['id']]['v'] for m in grp], y):.3f}" for t in TYPES if t != "strength")
+        print(f"  {name:13} n {len(grp):3} | market AUC {auc([m['p_a'] for m in grp], y):.3f} | Jev AUC: {cells}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("sample", "run", "report"))
-    {"sample": sample, "run": run, "report": report}[ap.parse_args().cmd]()
+    ap.add_argument("cmd", choices=("sample", "run", "report", "extras"))
+    {"sample": sample, "run": run, "report": report, "extras": extras}[ap.parse_args().cmd]()
