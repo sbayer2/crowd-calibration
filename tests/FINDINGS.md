@@ -445,3 +445,77 @@ hold-out periods differ in the Braves' form, so the selected variant's tuning ad
 - Where it recognises neither player, Jev is about 1 standard error above chance (SE ≈ 0.03 at n = 395).
 - Jev's strength level works as a "do I know these players?" flag that separates where it has skill from where it
   does not.
+
+## S-001 — Experiment 8: the Braves-optimal request does not carry over; its venue wording hurts or does nothing
+
+**Run 2026-10-06, after pre-registration** (`docs/PREDICTIONS-SPORTS.md`, commit 3d6c493).
+
+**Setup.**
+- 1,563 resolved moneyline games, every game asked once per config, blind:
+  - MLB 507 (all teams);
+  - NFL 393;
+  - NBA 373;
+  - NHL 290.
+- Three configs:
+  - `c182`: the experiment 6 optimum (bins + "Consider home-field advantage and travel" + string state);
+  - `bins_plain`: c182 without the venue instruction;
+  - `noul_both`: plain yes/no about each team.
+
+**Result.** Each config cell gives AUC, rank correlation with the market, and pick accuracy (CV).
+
+| Sport | Market AUC / picks | c182 | bins_plain | noul_both | Venue effect, AUC(c182) − AUC(bins_plain) [95% CI] |
+|---|---|---|---|---|---|
+| MLB | 0.633 / 59.6% | 0.494, +0.17, 52.7% | 0.575, +0.64, 55.8% | 0.576, +0.63, 56.8% | **−0.081 [−0.138, −0.022]** |
+| NFL | 0.689 / 63.1% | 0.584, +0.47, 56.0% | 0.598, +0.59, 57.0% | 0.595, +0.58, 58.0% | −0.014 [−0.063, +0.035] |
+| NBA | 0.828 / 74.0% | 0.583, +0.23, 53.6% | 0.576, +0.23, 57.4% | 0.572, +0.26, 55.5% | +0.007 [−0.042, +0.053] |
+| NHL | 0.645 / 59.7% | 0.525, +0.10, 50.7% | 0.534, +0.12, 52.8% | 0.540, +0.15, 54.5% | −0.009 [−0.082, +0.058] |
+
+- **Mean venue effect:** −0.024.
+- **Worst-block margin over the market** (the experiment 6 target): −8.7 to −31.9 points; no config is near parity.
+- **Raw lean to the home (second-listed) team, c182 vs bins_plain:**
+
+  | | MLB | NFL | NBA | NHL |
+  |---|---|---|---|---|
+  | c182 | 52% | 43% | 31% | 34% |
+  | bins_plain | 38% | 43% | 44% | 43% |
+
+- **Always picking the home team:** 52.4-54.1%.
+
+**Predictions.**
+- **X1 partly held.**
+  - The venue wording never helped (no positive CI).
+  - In MLB it significantly *hurt*. The mean effect (−0.024) falls just outside the ±0.02 band, on the harmful side.
+  - The Braves optimum was luck plus overfitting to one team.
+- **X2 held.** The market leads every config in every sport.
+- **X3 failed for the NBA.**
+  - Jev's best NBA AUC is 0.583, not ≥ 0.65.
+  - The NFL is Jev's best sport (0.598).
+  - MLB (0.576) and NHL (0.540) are ≤ 0.58 as predicted.
+  - The NBA has the largest market-Jev gap (0.83 vs 0.58). Post hoc: NBA outcomes turn on current-season form, rest and
+    injuries, which the market prices and a 2024-25 prior cannot.
+- **X4 held.** The experiment 6 target is not met anywhere.
+- **X5 failed.**
+  - The venue wording moved the raw lean to the home team by up to 14 points, but in different directions by sport
+    (MLB +14, NBA −13, NHL −9, NFL 0).
+  - Jev does not read home field from "A vs. B". Told to consider it, it guesses, and the guesses do not track the
+    real home team.
+
+**Reading.**
+- **The Braves optimum was a fluke.** On all MLB teams it is the *worst* of the three configs: AUC 0.494, a coin flip,
+  against 0.575 without the wording.
+- **An instruction about information absent from the state can scramble Jev's ordering, not just its level.**
+  - In MLB, adding "consider home-field advantage and travel" dropped Jev's rank correlation with the market from
+    +0.64 to +0.17.
+  - **Correction:** in the T-002 discussion I said framing "moves the level of the forecast, not its ordering". That
+    held for *question type* in tennis. It does not hold for an instruction that asks Jev to reason about something it
+    cannot see.
+- **Restricting the sample to one team hid Jev's prior.**
+  - Across all MLB teams, plain bins track the market at +0.64. Within the Braves' season (O-001) the best was +0.50 and
+    the mean +0.31.
+  - One team's games vary only in the opponent, which compresses the reputational spread Jev knows about.
+
+**Limits.**
+- One run per config.
+- One season window per sport; the NBA and NHL windows are the second half of 2025-26.
+- The home/away convention was checked on two NFL games and is consistent with the 46-48% first-listed win rate. It was
+  not checked game by game.
