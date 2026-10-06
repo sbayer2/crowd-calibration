@@ -244,3 +244,86 @@ standings, pitchers or home/away facts.
 
 **Limits.** One team. The hold-out may include up to 5 spring-training games before March 26. The tuning and
 hold-out periods differ in the Braves' form, so the selected variant's tuning advantage reflects that period.
+
+## O-001 — Experiment 6: 220 ways of asking Jev change how its ordering follows the market, not whether it predicts the outcome
+
+**Run 2026-10-05, after pre-registration** (`docs/PREDICTIONS-OPTIMIZE.md`, commit 48af96f).
+
+**Setup.**
+- Search space: 220 of the 270 request configs (question type × instruction wording × criteria × state shape).
+- Each config was asked about all 172 Braves games of 2026 in fresh, stateless runs. 291 runs in total; every top-5
+  config re-run until it had 3 runs.
+- Picks: "Braves" when the config's number is at or above a cut-off fitted on the other three time blocks.
+- Target (option a): pick accuracy at least the market's in every block. Market: 70 / 58 / 58 / 53%, 59.9% overall.
+
+**Result.**
+
+| | Blocks | Overall | Worst-block margin | Picks Braves |
+|---|---|---|---|---|
+| Polymarket | 70 / 58 / 58 / 53% | 59.9% | 0 | — |
+| Best config, 3-run mean: `score_bins \| venue \| plain \| string` | 67 / 58 / 59 / 56% | 60.1% | −2.3 | 87% |
+| Runner-up: `noul_both \| favourite \| plain \| object` | 70 / 55 / 58 / 53% | 58.9% | −3.1 | 99% |
+| Always pick the Braves | 70 / 53 / 58 / 53% | 58.7% | −4.7 | 100% |
+
+- **The best config:** win-likelihood bins about each team, the instruction to "consider home-field advantage and
+  travel", and the matchup as one sentence.
+- **Configs meeting the target:** 0 of 220 on their mean; 1 of 291 single runs. That run was the best config's
+  first run (72 / 60 / 58 / 56%); its two confirmation runs fell back to 67% in March-May.
+- **Null control:** the same configs and runs scored on 200 shufflings of win/loss.
+  - Best margin: median +0.0, 95th percentile +9.3.
+  - 78% of shuffles reach or beat the real best (−2.3).
+  - The search found nothing that luck over 220 configs would not produce.
+- **Run-to-run agreement:** mean rank correlation +0.97 over 97 pairs of repeated runs. Jev is close to deterministic
+  in how it orders games, so differences between configs come from the query, not sampling noise.
+
+**How each setting moves Jev** (mean over the configs using it):
+
+| Setting | Values | Rank corr. with market | Rank corr. with outcome | Picks Braves |
+|---|---|---|---|---|
+| Question type | yes/no Braves, yes/no both, choice both orders, strength Score, bins Score | +0.24 / +0.29 / +0.28 / **+0.42** / +0.31 | +0.02 to +0.05 | 95% → 89% |
+| Instruction wording | plain, strength, form, favourite, coin flip, venue | +0.22 (venue) to +0.34 | +0.02 to +0.04 | 89% to 94% |
+| Criteria | plain, detailed, boundary | +0.28 to +0.32 | +0.02 to +0.03 | 90% to 93% |
+| State shape | object, string, object without date | +0.29 to +0.32 | +0.02 to +0.03 | 91% to 92% |
+
+- Across configs, the rank correlation with market price spans −0.04 to +0.50 (mean +0.31).
+- The rank correlation with the outcome spans −0.09 to +0.10 (mean +0.03). No config reaches the market's own
+  +0.11.
+
+**Predictions.**
+- **O1 held:** no config met the target on its mean.
+- **O2 held:** the best config is well inside the null distribution.
+- **O3 held.**
+  - Question type has the largest spread in market correlation (0.18) and Braves-pick share (6 points).
+  - The spreads within wording (0.12), criteria (0.04) and state (0.03) are all under 0.15.
+  - **Correction:** at 20 configs I said wording "points against O3" (range 0.18-0.42 then). With 33-40 configs per
+    wording the range narrowed to 0.22-0.34. The early read was small-sample noise.
+- **O4 held:** 218 of 220 configs (99%) correlate positively with the market.
+- **O5 held:** the mean correlation with the outcome is +0.03.
+- **O6 held:** run-to-run agreement (+0.97) far exceeds agreement with the market (+0.31).
+
+**Reading (the user's question: how does the architecture of the query change the prediction?).**
+- **The query sets how closely Jev's ordering of games follows the crowd's.**
+  - The question type matters most: asking for each club's strength as a Score, the docs' composite pattern,
+    roughly doubles the market correlation of a plain yes/no (+0.42 vs +0.24).
+  - Wording comes next; criteria and state shape barely matter.
+  - Mechanism: with only a matchup in the state, every query draws on the same team-reputation prior. The question
+    type decides how much of that prior's gradation reaches the answer.
+    - A strength Score exposes it level by level.
+    - A yes/no about one team compresses it to around 0.5 with a constant lean.
+- **No query architecture reaches the outcomes.** The prior Jev expresses tracks the crowd's reputational view, but
+  not the extra information the market adds (its +0.11 against Jev's best +0.10 and mean +0.03).
+- **This contrasts with emoji-pile.** There, the items being sorted are in the state, so the task acts on visible
+  information. Here the state is two names and a date. The query can reshape the prior, not add evidence.
+- **The fitted cut-off pushed most configs to "always Braves".** Where the ordering carried no outcome information,
+  the best use of it was to ignore it. Only the leader (87% Braves picks) used its ordering to pick against the
+  Braves in some games, and its 3-run mean ties the market overall by one game in 172.
+
+**Limits.**
+- One team, one season.
+- Mutation search, not the full grid: 50 configs unvisited, mostly near poor regions.
+- The cut-off is fitted per block on the other three, which costs a forecaster with real information too (the
+  market's own price scored −9.3 this way).
+
+**Open.**
+- The same grid with a richer state (e.g. last season's records, home/away stated explicitly) would test whether the
+  query matters more once Jev has something to sort on.
