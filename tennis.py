@@ -11,6 +11,7 @@ price is pre-match).
 
     .venv/bin/python tennis.py collect --sport tennis --days 45     # -> runs/matches-tennis.json
     .venv/bin/python tennis.py collect --sport mlb --days 45
+    .venv/bin/python tennis.py collect --sport nba --days 75 --end 2026-04-12   # a past window
     .venv/bin/python tennis.py ceiling                               # the market's skill per sport
 """
 
@@ -82,13 +83,13 @@ def row(m: dict[str, Any]) -> dict[str, Any] | None:
             "p_a": float(hist[-1]["p"]), "a_won": int(prices[0] == 1.0), "volume": float(m["volume"])}
 
 
-def collect(sport: str, days: int) -> None:
-    now = dt.datetime.now(dt.timezone.utc)
+def collect(sport: str, days: int, end: str | None = None) -> None:
+    now = dt.datetime.fromisoformat(end + "T23:59:59+00:00") if end else dt.datetime.now(dt.timezone.utc)
     ms = candidates(sport, days, now)
     with ThreadPoolExecutor(8) as pool:
         rows = sorted((r for r in pool.map(row, ms) if r), key=lambda r: r["start"])
     out = ROOT / "runs" / f"matches-{sport}.json"
-    out.write_text(json.dumps({"sport": sport, "days": days, "fetched_at": now.isoformat(), "rows": rows}, indent=1))
+    out.write_text(json.dumps({"sport": sport, "days": days, "end": now.date().isoformat(), "fetched_at": now.isoformat(), "rows": rows}, indent=1))
     print(f"{sport}: {len(ms)} candidate markets, {len(rows)} priced and resolved -> {out.name}")
 
 
@@ -113,7 +114,7 @@ def ceiling() -> None:
     sets = {}
     for f in sorted((ROOT / "runs").glob("matches-*.json")):
         d = json.loads(f.read_text())
-        sets[f"{d['sport']} ({d['days']} days)"] = ([r["p_a"] for r in d["rows"]], [r["a_won"] for r in d["rows"]])
+        sets[f"{d['sport']} ({d['days']}d to {d.get('end', d['fetched_at'][:10])})"] = ([r["p_a"] for r in d["rows"]], [r["a_won"] for r in d["rows"]])
     braves = json.loads((ROOT / "runs" / "braves-season.json").read_text())["rows"]
     sets["Braves 2026 (reference)"] = ([g["market_p"] for g in braves], [int(g["braves_won"]) for g in braves])
     for name, (p, y) in sets.items():
@@ -128,5 +129,6 @@ if __name__ == "__main__":
     ap.add_argument("cmd", choices=("collect", "ceiling"))
     ap.add_argument("--sport", default="tennis")
     ap.add_argument("--days", type=int, default=45)
+    ap.add_argument("--end", help="last day of the window, YYYY-MM-DD (default: now)")
     a = ap.parse_args()
-    collect(a.sport, a.days) if a.cmd == "collect" else ceiling()
+    collect(a.sport, a.days, a.end) if a.cmd == "collect" else ceiling()
