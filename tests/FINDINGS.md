@@ -327,3 +327,82 @@ hold-out periods differ in the Braves' form, so the selected variant's tuning ad
 **Open.**
 - The same grid with a richer state (e.g. last season's records, home/away stated explicitly) would test whether the
   query matters more once Jev has something to sort on.
+
+## T-001 — Experiment 7: blind Jev predicts tennis winners where it knows the players; the question type barely matters
+
+**Run 2026-10-05, after pre-registration** (`docs/PREDICTIONS-TENNIS.md`, commit 990f351).
+
+**Setup.**
+- Sample: 1,250 singles matches over 45 days, 625 tour-level and 625 lower-level (random, seed 7).
+- Jev was told only the sport, tournament, "A vs. B" and the date.
+- Five question types, one fresh run each.
+- Primary measure: AUC against the outcome.
+
+**Result.**
+
+| | Tour-level AUC | Rank corr. with market | Picks (CV cut-off) | Lower-level AUC | Rank corr. with market | Picks (CV cut-off) |
+|---|---|---|---|---|---|---|
+| **Polymarket** | **0.784** | — | 69.6% (at 50%) | **0.734** | — | 68.6% (at 50%) |
+| yes/no about A | 0.683 | +0.59 | 62.1% | 0.569 | +0.20 | 55.7% |
+| yes/no about each | **0.692** | +0.60 | 61.1% | 0.560 | +0.20 | 56.8% |
+| choice, both orders | 0.690 | +0.60 | 62.6% | **0.570** | +0.22 | 57.3% |
+| strength Score | 0.682 | +0.54 | 64.0% | 0.542 | +0.24 | 53.3% |
+| win-likelihood bins | 0.688 | +0.58 | 62.6% | 0.568 | +0.19 | 56.2% |
+
+- **Market minus Jev AUC** (paired bootstrap, 2,000 resamples):
+  - tour-level +0.09 to +0.10, every CI from about +0.05 to +0.14;
+  - lower-level +0.16 to +0.19, every CI from about +0.11 to +0.24.
+- **Strength levels Jev gave** (per player, rounded; 0 = "unknown or lower-level" ... 4 = "elite"):
+
+  | | 0 | 1 | 2 | 3 | 4 | Mean |
+  |---|---|---|---|---|---|---|
+  | Tour-level | 9% | 26% | 29% | 24% | 11% | 2.00 |
+  | Lower-level | 76% | 18% | 5% | 0% | 0% | 0.37 |
+
+- **For comparison (O-001, Braves):** Jev's best correlation with outcomes +0.10, the market's +0.11. Tennis is the
+  first setting in this repo where blind Jev clearly predicts outcomes.
+
+**Predictions.**
+- **T1 held.** Tour-level best AUC 0.692 (≥ 0.65); lower-level best 0.570 (≤ 0.60).
+- **T2 held.** The market leads every type in both tiers; every CI excludes 0.
+- **T3 failed.** The strength Score had the *lowest* rank correlation with the market on tour-level matches (+0.54
+  vs +0.58 to +0.60). The O-001 ordering did not replicate.
+- **T4 failed.**
+  - The AUC spread across types is 0.010 on tour-level and 0.028 on lower-level, larger where Jev knows less.
+  - The lower-level spread is the strength Score falling behind (0.542).
+- **T5 held strongly.** Jev put 76% of lower-level players at "unknown or lower-level", and spread tour-level players
+  across all five levels.
+
+**Reading.**
+- **Knowledge sets the result; the query does not.**
+  - Where Jev knows the players, all five question types reach the same AUC (0.68-0.69) and the same agreement with
+    the market (+0.54 to +0.60).
+  - Where it does not, all five fall to 0.54-0.57.
+  - The tier moves AUC by about 0.12; the question type moves it by at most 0.03.
+- **Revised view of O-001 (post hoc, not pre-registered).**
+  - In baseball, the question type mattered for agreement with the market (+0.24 to +0.42) because there was almost
+    no signal; the query decided how much of a weak prior showed.
+  - With a strong prior, every query extracts it equally.
+  - Prediction T4 assumed the opposite and failed.
+- **Why the strength Score lags (post hoc).**
+  - It rates each player in general, not the matchup, so it cannot use anything specific to the pairing.
+  - On lower-level matches it puts 76% of players on the same "unknown" level, so most pairs tie and nothing orders
+    them.
+  - The probability-style types keep finer gradations.
+- **Jev recognises the edge of its knowledge** (T5). That makes the strength level a usable "does Jev know these
+  players?" flag; experiment 4's seams finding (H-001) suggested this, and here it is direct.
+- **The lower-level AUC is above chance (0.54-0.57).** Some lower-level draws include players known before the cutoff
+  (veterans in Challengers, Slam qualifiers). Not checked.
+- **The crowd stays well ahead.** About 0.10 AUC on tour-level matches, about 7 points in pick accuracy: 2026 form,
+  injuries, surface and fatigue are priced, and Jev cannot see them.
+
+**Limits.**
+- One run per type (O-001 measured run-to-run rank agreement at +0.97 in baseball; not re-measured on tennis).
+- 45 days of matches, mostly hard courts (US Open and the Asian swing).
+- The tier is assigned by tournament, not by each player's ranking.
+- Market prices are taken 5 minutes before the *scheduled* start; tennis starts often slip later, so the market may
+  have had more time than intended. If anything, that favours the market.
+
+**Open.**
+- Does Jev add anything to the market? E.g. a logistic model of the outcome on market price + Jev, cross-validated.
+- Split lower-level matches by Jev's strength level, to test whether the above-chance AUC comes from the known players.

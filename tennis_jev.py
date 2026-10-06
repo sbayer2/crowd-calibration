@@ -183,9 +183,9 @@ def report() -> None:
             print(f"  {t:12} {len(v):4} {auc(v, y):6.3f} {auc(mk, y) - auc(v, y):+9.3f} [{lo:+.3f}, {hi:+.3f}] "
                   f"{spearman(v, mk):+8.2f} {cv_acc(v, y):11.1%}")
         if "strength" in vals:
-            lv = [vals["strength"][m["id"]][k] for m in sub for k in ("level_a", "level_b")]
-            print(f"  strength levels given (0 = unknown/lower ... 4 = elite): "
-                  + " ".join(f"{i}:{lv.count(float(i)) / len(lv):.0%}" for i in range(5)))
+            lv = [round(vals["strength"][m["id"]][k]) for m in sub for k in ("level_a", "level_b")]     # Score is an expected level
+            print(f"  strength level per player, rounded (0 = unknown/lower ... 4 = elite): "
+                  + " ".join(f"{i}:{lv.count(i) / len(lv):.0%}" for i in range(5)))
 
 
 if __name__ == "__main__":
