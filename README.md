@@ -1,50 +1,128 @@
-# crowd-calibration: is the prediction-market crowd baked into Jev?
+# crowd-calibration
 
-## Context
+**Does a language model know what the crowd knows? And who is "the crowd" in a prediction market?**
 
-A LinkedIn post by the user proposes an experiment: take 20-30 active Polymarket questions, ask Jev each one without
-the market price, and compare Jev's probability and confidence with the price. The null hypothesis is that Jev's
-probabilities are random with respect to prices; rejecting it would support "prediction-market wisdom is encoded in
-Jev's calibrated weights".
+[Jev](https://docs.typesafe.ai) (TypeSafe's System One) answers structured questions (yes/no, choice, score) with
+probabilities. This project asks Jev about real Polymarket events **without showing it the price**, then compares its
+answers with the market and with what actually happened. Every experiment is pre-registered (predictions committed
+before any data), run on fresh, independent Jev calls, and recorded in `tests/FINDINGS.md`, including the predictions
+that failed.
 
-It can be run with no Polymarket account or subscription. Verified 2026-09-30:
-- Polymarket's Gamma API (`https://gamma-api.polymarket.com/markets`) returns `question`, `description`, `outcomes`,
-  `outcomePrices`, `bestBid`, `bestAsk`, `lastTradePrice`, `volumeNum`, `liquidityNum`, `endDate`, `createdAt` and
-  `negRisk` without authentication.
-- Jev runs on the existing gateway credit ($15; about $0.00001 per question).
-- openjev runs locally at no cost.
+## Now running: is Polymarket's sports price the crowd or the bookmaker? (experiments 9 and 10)
 
-**The post's design is changed in three ways, all from evidence gathered in this session:**
-1. **Confidence has to be measured separately from the point estimate.** A noul returns a single number, so its
-   "confidence" is just distance from 0.5. Jev is therefore also asked a Score question over probability bins. The
-   expected value is the forecast; the spread of the distribution (mid-level mass and entropy) is the confidence.
-   This makes the post's "58% with high vs low confidence" measurable.
-2. **Obvious markets would inflate the correlation.** Many markets sit at 0.2% or 99.8%. This is the easy-agreement
-   confound already recorded in emoji-pile's crowd-disagreement proposal. The primary test is on contested markets
-   (price 0.15-0.85); all 60 are reported as secondary.
-3. **A control model is needed.** openjev, an open Qwen3.5 4B with Jev's interface, shows whether any correlation is
-   Jev-specific or a general language-model prior. Safety-set OJ-001 showed openjev tracks Jev closely on another
-   task.
+Polymarket pays market makers to quote near its price, and practitioners say sports quotes are copied from sharp
+sportsbooks such as Pinnacle. If so, the "wisdom of the crowd" Jev was being compared with may be largely a
+bookmaker's line. A **live collector** records three forecasters for every game, going forward:
 
-Decisions (user, 2026-09-30): **60 markets** (30 contested + 30 across the full range); **Jev + openjev control**.
+| Source | What | When |
+|---|---|---|
+| **Pinnacle** (+ Matchbook exchange) | no-vig moneyline, via The Odds API | early in the day, 60 min and 5 min before each start |
+| **Polymarket** | 1-minute price history and the result | fetched after the games |
+| **Jev** | blind answer: told only the league, "Away vs. Home" and the date | once per game, before it starts |
 
-## Project
+- **Experiment 9:** NHL, 2026-10-06 to 11-05, about 400 games ([pre-registration](docs/PREDICTIONS-NHL.md)).
+- **Experiment 10:** MLB postseason, Division Series through the World Series, a pilot of about 40 games
+  ([pre-registration](docs/PREDICTIONS-MLB.md)).
 
-New project `~/projects/crowd-calibration/` (git, local only). Python 3.13 `.venv`; torch and transformers only for the
-openjev arm. The layout follows safety-set.
+Pre-registered tests:
+- **Crowd or book.**
+  - **C1:** do Polymarket and Pinnacle agree?
+  - **C2:** does Polymarket predict anything beyond Pinnacle?
+  - **C3:** when they disagree an hour before the start, which one moves toward the other?
+- **What Jev agrees with.**
+  - **J1:** does Jev side with the crowd or the book where they differ?
+  - **J2:** is Jev closer to the early line (mostly a strength rating) than to the close (which adds game-day news)?
+
+Agreement alone cannot separate copying from two good forecasters reaching the same answer, so C2 and C3 are the
+decisive tests.
+
+## Headline findings so far
+
+| # | Question | Finding |
+|---|---|---|
+| C-001 | Does blind Jev track Polymarket on long-range markets? | Moderately: ρ 0.52 on contested markets (p = 0.002). Misses are events after its training cutoff. |
+| H-001 | Where does Jev's knowledge end? | AUC against outcomes about 0.82 on 2024 markets, falling to about 0.63 in 2025 Q2 onward; the crowd stays at 0.90-0.98. No memory of surprises. |
+| B-001, O-001 | Can rewording the question make Jev match the market on Braves games? | No. 220 request configurations, none matched Polymarket in every part of the season; the best was within luck. The wording changes Jev's numbers, not its accuracy. |
+| T-001, T-002 | Tennis: does Jev know the players? | Where it knows them, yes: AUC 0.69 on tour-level matches (market 0.78), about 0.55 on Challenger/ITF. All question types score alike once Jev has knowledge. Jev adds nothing to the market, and its strength score flags players it doesn't know. |
+| S-001 | Does the Braves-optimal wording carry over to MLB, NFL, NBA, NHL? | No. It never helps, and it significantly hurts MLB. Jev can't infer home team from "A vs. B" (Polymarket lists away first). |
+
+**What carries across:** with only a matchup in the state, Jev expresses a **reputational prior**. The question type
+and wording decide how that prior is expressed, not what it knows. The crowd's edge is current information: 2026
+form, injuries, lineups.
+
+## Run it locally
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install python-dotenv     # + torch transformers huggingface_hub for the openjev arm
+printf 'AI_GATEWAY_API_KEY=...\nODDS_API_KEY=...\n' > .env        # Vercel AI Gateway key (Jev); The Odds API key (free tier)
+.venv/bin/python live_odds.py --sport nhl tick            # one collection pass (run every 5 min by a LaunchAgent)
+.venv/bin/python live_odds.py --sport nhl status
+.venv/bin/python live_odds.py --sport nhl collect-poly    # after games: Polymarket prices and results
+.venv/bin/python tennis_jev.py report                     # any finished experiment re-reports from runs/
+```
+
+No Polymarket account is needed: its Gamma and CLOB APIs are public. Results in `runs/` are regenerable and gitignored.
+The Odds API free tier has no historical odds, so the Pinnacle comparison is collected going forward.
+
+## Architecture
+
+- **Transport:** `jev.py` (gateway, retries); `openjev_arm.py` (a local open 4B Jev-like model as a control).
+- **Market data:**
+  - `markets.py` / `history.py`: long-range markets;
+  - `braves.py`, `tennis.py collect`: resolved games with pre-match prices;
+  - `live_odds.py`: live Pinnacle collection.
+- **Experiments**, one module each:
+  - `run.py` / `analyze.py`: experiments 1 and 4;
+  - `braves_iter.py`: experiment 5;
+  - `braves_opt.py`: experiment 6, the 220-config search;
+  - `tennis_jev.py`: experiment 7;
+  - `sports_jev.py`: experiment 8;
+  - `live_odds.py`: experiments 9 and 10.
+- **Method:**
+  - every Jev request is fresh and stateless (no cache, no session);
+  - pick cut-offs are fitted on held-out time blocks;
+  - paired bootstrap CIs;
+  - a shuffled-outcome null for any search.
+
+## Practical applications
+
+- **Judging an LLM forecaster honestly.** Agreement with a market is not skill. Score against outcomes, against a
+  sharp book, and across a knowledge cutoff.
+- **Prompt design for structured-output models.** Question type mattered only when the model had little to go on. An
+  instruction about information the model can't see (e.g. "consider home field") made its ordering worse, not better.
+- **Reading prediction markets.** Experiments 9 and 10 measure how much of a sports market's price is its own crowd
+  and how much is a relayed bookmaker line.
+
+## Research directions
+
+- **Did Jev learn bookmaker lines in pretraining?** Compare Jev with Pinnacle closing odds on soccer matches before
+  and after its cutoff (free historical CSVs).
+- **Does the order book carry information beyond the price?** Record depth and imbalance as well as the midpoint.
+- **Framing in markets:** the partition dependence that Sonnemann et al. found, tested on Polymarket's bucketed and
+  multi-outcome markets.
+
+## Code structure
 
 ```
 crowd-calibration/
-  .gitignore            .venv/, __pycache__/, .env, runs/, *.log
-  .env                  AI_GATEWAY_API_KEY (the user copies it in, as for safety-set)
-  markets.py            fetch + filter + freeze a snapshot of Polymarket markets
-  jev.py                copied from safety-set/jev.py (gateway transport, retries); noted as a copy
-  openjev_arm.py        pattern of safety-set/openjev_arm.py; vendor/openjev copied with SOURCE.md
-  questions.py          state + the two questions (noul, score over probability bins)
-  run.py                ask each arm about each frozen market; 3 Jev runs, 1 openjev run
-  analyze.py            correlations, permutation test, bootstrap CIs, confidence analysis
-  docs/PREDICTIONS.md   written and committed before any model sees a market
-  docs/ADC.md           ADC-001...
-  tests/FINDINGS.md
-  README.md
+  jev.py  openjev_arm.py  vendor/            model transports
+  markets.py  history.py  braves.py  braves_season.py  tennis.py  games.py  resolve.py   data
+  run.py  analyze.py  analyze_history.py  analyze_games.py  questions.py  game_questions.py  culture.py
+  braves_iter.py  braves_opt.py  tennis_jev.py  sports_jev.py  live_odds.py               experiments
+  docs/PREDICTIONS-*.md   pre-registrations (committed before each run)
+  docs/ADC.md             architecture decisions
+  tests/FINDINGS.md       the empirical record, including failed predictions and corrections
+  tests/test_stats.py
 ```
+
+## Literature
+
+- Wolfers, J. & Zitzewitz, E. (2006). *Interpreting prediction market prices as probabilities.* NBER w12200.
+- Manski, C. (2006). *Interpreting the predictions of prediction markets.* Economics Letters 91(3).
+- Hanson, R. (2003). *Combinatorial information market design.* Information Systems Frontiers 5(1).
+- Sonnemann, U., Camerer, C., Fox, C. & Langer, T. (2013). *How psychological framing affects economic market prices
+  in the lab and field.* PNAS 110(29).
+- Snowberg, E. & Wolfers, J. (2010). *Explaining the favorite-longshot bias.* Journal of Political Economy 118(4).
+- TypeSafe, *Jev documentation and jaggedness notes*, docs.typesafe.ai.
+
+License: MIT.
