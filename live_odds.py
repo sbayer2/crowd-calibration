@@ -28,7 +28,10 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
 ROOT = Path(__file__).parent
+load_dotenv(ROOT / ".env")                                # ODDS_API_KEY; the LaunchAgents also export it
 SPORTS = {   # odds-api key, league name told to Jev, Polymarket tags (windowed scan), tags read whole (few, long-dated events)
     "nhl": {"key": "icehockey_nhl", "league": "NHL", "tags": ["nhl"], "whole": []},
     "mlb": {"key": "baseball_mlb", "league": "MLB", "tags": ["mlb"], "whole": ["mlb-playoffs"]},
