@@ -72,3 +72,10 @@ match, a Polymarket price within 10 minutes before the T−5 snapshot time, or a
   was made, not when Pinnacle last moved; each record keeps the bookmaker's `last_update`.
 - Polymarket's displayed price is the midpoint, or the last trade if the spread exceeds 10¢.
 - Snapshots need the Mac awake. Missed windows are logged, not filled.
+
+## Amendment 2026-10-07 (operational, no change to collection or measures)
+- The collector was renamed `nhl_live.py` → `live_odds.py` and given a `--sport` setting, so the same code also runs
+  the MLB postseason arm (experiment 10, `docs/PREDICTIONS-MLB.md`).
+- The NHL LaunchAgent now runs `live_odds.py --sport nhl tick`; state and data stay in `runs/nhl/`.
+- `collect-poly` now retries games whose Polymarket result was not settled yet (for up to 3 days).
+- Both arms share one credit balance. If the guard stops calls before 2026-11-05, the cut is reported.

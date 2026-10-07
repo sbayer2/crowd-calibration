@@ -1,4 +1,4 @@
-"""Experiment 9: NHL, live — crowd or book? And what is Jev agreeing with?
+"""Experiments 9 (NHL) and 10 (MLB postseason), live — crowd or book? And what is Jev agreeing with?
 
 Collected going forward (The Odds API free tier has no history). A LaunchAgent runs `tick` every 5 minutes:
   - the schedule (free) from The Odds API, refreshed hourly;
@@ -7,13 +7,14 @@ Collected going forward (The Odds API free tier has no history). A LaunchAgent r
       t60    45-70 min before each start-time slot
       t5     1-12 min before each start-time slot
   - Jev, blind, once per game before it starts: two configs from experiment 8 (noul_both, bins_plain),
-    told only "NHL", "Away vs. Home" and the date. Each request is fresh and stateless.
+    told only the league, "Away vs. Home" and the date. Each request is fresh and stateless.
 Polymarket prices (1-minute history at the snapshot times) and results are fetched afterwards (`collect-poly`).
-Credit guard: at most DAILY_CAP odds calls per UTC day; none below MIN_REMAINING credits.
+Credit guard: at most DAILY_CAP odds calls per sport per UTC day; none below MIN_REMAINING credits (shared key).
+One LaunchAgent per sport; each sport keeps its own state in runs/<sport>/.
 
-    .venv/bin/python nhl_live.py tick            # what the LaunchAgent runs
-    .venv/bin/python nhl_live.py status
-    .venv/bin/python nhl_live.py collect-poly    # after games: Polymarket prices + results
+    .venv/bin/python live_odds.py --sport nhl tick            # what the LaunchAgents run (--sport nhl | mlb)
+    .venv/bin/python live_odds.py --sport mlb status
+    .venv/bin/python live_odds.py --sport mlb collect-poly    # after games: Polymarket prices + results
 """
 
 from __future__ import annotations
@@ -28,8 +29,13 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).parent
-OUT = ROOT / "runs" / "nhl"
-API = "https://api.the-odds-api.com/v4/sports/icehockey_nhl/"
+SPORTS = {   # odds-api key, league name told to Jev, Polymarket tags (windowed scan), tags read whole (few, long-dated events)
+    "nhl": {"key": "icehockey_nhl", "league": "NHL", "tags": ["nhl"], "whole": []},
+    "mlb": {"key": "baseball_mlb", "league": "MLB", "tags": ["mlb"], "whole": ["mlb-playoffs"]},
+}
+SPORT = "nhl"
+OUT = ROOT / "runs" / SPORT
+API = f"https://api.the-odds-api.com/v4/sports/{SPORTS[SPORT]['key']}/"
 EARLY_UTC_HOUR, EARLY_HORIZON_H, DAILY_CAP, MIN_REMAINING = 14, 20, 16, 25
 WINDOWS = {"t60": (45, 70), "t5": (1, 12)}               # minutes before the slot's start
 JEV_CONFIGS = ["noul_both", "bins_plain"]
@@ -91,7 +97,7 @@ def ask_jev(events: list[dict[str, Any]], st: dict[str, Any], t: dt.datetime) ->
         out = {"id": e["id"], "away": e["away_team"], "home": e["home_team"], "commence": e["commence_time"],
                "asked_at": t.isoformat(), "v_away": {}, "answers": {}}
         for cfg in JEV_CONFIGS:
-            stt, qs = request(cfg, "NHL", g)
+            stt, qs = request(cfg, SPORTS[SPORT]["league"], g)
             ans = jev.ask(stt, qs)["answers"]
             out["v_away"][cfg], out["answers"][cfg] = value(cfg, ans), ans
         return out
@@ -157,23 +163,40 @@ def collect_poly() -> None:
     games = {e["id"]: e for s in snaps for e in s["events"]}
     poly = load("poly.json", {})
     t = now()
-    todo = [g for g in games.values() if g["id"] not in poly and iso(g["commence_time"]) < t - dt.timedelta(hours=5)]
+    retry = lambda g: g["id"] not in poly or (poly[g["id"]].get("away_won") is None and iso(g["commence_time"]) > t - dt.timedelta(days=3))
+    todo = [g for g in games.values() if retry(g) and iso(g["commence_time"]) < t - dt.timedelta(hours=5)]
     if not todo:
         print("nothing new to collect")
         return
     lo = min(iso(g["commence_time"]) for g in todo) - dt.timedelta(days=1)
-    markets = []
-    d = lo
-    while d < t:
-        d2 = d + dt.timedelta(days=3)
-        for off in range(0, 2000, 100):
-            evs = braves.get(braves.EVENTS.format(tag="nhl", off=off, a=d.strftime("%Y-%m-%dT%H:%M:%SZ"), b=d2.strftime("%Y-%m-%dT%H:%M:%SZ")))
+    found: dict[str, dict] = {}
+
+    def take(evs):
+        for e in evs:
+            for m in e.get("markets", []):
+                if m.get("sportsMarketType") == "moneyline" and m.get("gameStartTime"):
+                    found[str(m["id"])] = m
+    for tag in SPORTS[SPORT]["tags"]:
+        d = lo
+        while d < t:
+            d2 = d + dt.timedelta(days=3)
+            for off in range(0, 2000, 100):
+                evs = braves.get(braves.EVENTS.format(tag=tag, off=off, a=d.strftime("%Y-%m-%dT%H:%M:%SZ"), b=d2.strftime("%Y-%m-%dT%H:%M:%SZ")))
+                if not evs:
+                    break
+                take(evs)
+                if len(evs) < 100:
+                    break
+            d = d2
+    for tag in SPORTS[SPORT]["whole"]:
+        for off in range(0, 1000, 100):
+            evs = braves.get(f"https://gamma-api.polymarket.com/events?tag_slug={tag}&closed=true&limit=100&offset={off}")
             if not evs:
                 break
-            markets += [m for e in evs for m in e.get("markets", []) if m.get("sportsMarketType") == "moneyline" and m.get("gameStartTime")]
+            take(evs)
             if len(evs) < 100:
                 break
-        d = d2
+    markets = list(found.values())
     for g in todo:
         cands = [m for m in markets if abs(braves.ts(m["gameStartTime"]) - iso(g["commence_time"])) < dt.timedelta(hours=3)
                  and (names := json.loads(m["outcomes"])) and len(names) == 2
@@ -197,5 +220,9 @@ def collect_poly() -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
+    ap.add_argument("--sport", choices=tuple(SPORTS), default="nhl")
     ap.add_argument("cmd", choices=("tick", "status", "collect-poly"))
-    {"tick": tick, "status": status, "collect-poly": collect_poly}[ap.parse_args().cmd]()
+    a = ap.parse_args()
+    SPORT, OUT = a.sport, ROOT / "runs" / a.sport
+    API = f"https://api.the-odds-api.com/v4/sports/{SPORTS[a.sport]['key']}/"
+    {"tick": tick, "status": status, "collect-poly": collect_poly}[a.cmd]()
