@@ -115,6 +115,8 @@ def ask_jev(events: list[dict[str, Any]], st: dict[str, Any], t: dt.datetime) ->
 def tick() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     t = now()
+    with (OUT / "heartbeat.log").open("a") as fh:                                     # one line per run, to diagnose gaps
+        fh.write(t.isoformat(timespec="seconds") + "\n")
     st = load("state.json", {"events": [], "events_at": None, "done": {}, "calls": {}, "remaining": None, "jev": []})
     if not st["events_at"] or t - iso(st["events_at"]) > dt.timedelta(minutes=60):
         try:

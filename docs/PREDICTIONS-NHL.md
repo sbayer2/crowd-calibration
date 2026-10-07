@@ -79,3 +79,10 @@ match, a Polymarket price within 10 minutes before the T−5 snapshot time, or a
 - The NHL LaunchAgent now runs `live_odds.py --sport nhl tick`; state and data stay in `runs/nhl/`.
 - `collect-poly` now retries games whose Polymarket result was not settled yet (for up to 3 days).
 - Both arms share one credit balance. If the guard stops calls before 2026-11-05, the cut is reported.
+
+## Amendment 2026-10-07, 15:57 CDT (operational, no change to collection rules or measures)
+- The MLB T−5 snapshot for Guardians @ White Sox (20:00 UTC) was missed. The Mac was awake, but no tick ran in the
+  window (19:48-19:59 UTC), while the hotspot's DNS was failing intermittently. Recorded as missed.
+- From now on both LaunchAgents run every 2 minutes, not 5, giving 5-6 attempts per window. Each run writes a line to
+  `runs/<sport>/heartbeat.log`, so gaps can be diagnosed.
+- The snapshot windows (T−60: 45-70 min; T−5: 1-12 min) are unchanged.

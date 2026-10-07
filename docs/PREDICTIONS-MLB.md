@@ -38,3 +38,10 @@ a compressed range. J2 and J3 may look weaker than in the regular season for tha
   while the postseason runs, total about 400-450.
 - The shared guard (no call below 25 credits left) may cut the last days of the NHL window. Any cut is reported, not
   hidden.
+
+## Amendment 2026-10-07, 15:57 CDT (operational, no change to collection rules or measures)
+- The MLB T−5 snapshot for Guardians @ White Sox (20:00 UTC) was missed. The Mac was awake, but no tick ran in the
+  window (19:48-19:59 UTC), while the hotspot's DNS was failing intermittently. Recorded as missed.
+- From now on both LaunchAgents run every 2 minutes, not 5, giving 5-6 attempts per window. Each run writes a line to
+  `runs/<sport>/heartbeat.log`, so gaps can be diagnosed.
+- The snapshot windows (T−60: 45-70 min; T−5: 1-12 min) are unchanged.
