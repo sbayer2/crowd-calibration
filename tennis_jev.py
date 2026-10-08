@@ -35,7 +35,8 @@ from typing import Any
 from analyze import ranks, spearman
 
 ROOT = Path(__file__).parent
-OUT = ROOT / "runs" / "tennis-jev"
+ARM = "jev"                                              # jev (gateway) | nimble (local Ollama); set by --arm
+OUT = ROOT / "runs" / f"tennis-{ARM}"
 SAMPLE = ROOT / "runs" / "tennis-sample.json"
 SEED, WORKERS, BOOT = 7, 8, 2000
 TOUR_EVENTS = {"US Open ATP", "US Open WTA", "China Open", "Winston-Salem Open", "Sao Paulo Open", "Korea Open",
@@ -107,7 +108,10 @@ def value(t: str, m: dict[str, Any], ans: list[dict[str, Any]]) -> dict[str, Any
 
 
 def ask(st: dict[str, str], qs: dict[str, Any]) -> dict[str, Any]:
-    """One fresh, stateless Jev request."""
+    """One fresh, stateless request to the selected arm (identical questions for both)."""
+    if ARM == "nimble":
+        import nimble
+        return nimble.ask(st, qs)["answers"]
     import jev
     return jev.ask(st, qs)["answers"]
 
@@ -267,7 +271,48 @@ def extras() -> None:
         print(f"  {name:13} n {len(grp):3} | market AUC {auc([m['p_a'] for m in grp], y):.3f} | Jev AUC: {cells}")
 
 
+def compare() -> None:
+    """Experiment 11: Nimble against Jev on the same matches and questions (docs/PREDICTIONS-NIMBLE.md)."""
+    ms = json.loads(SAMPLE.read_text())["rows"]
+    arms = {}
+    for arm in ("jev", "nimble"):
+        d = ROOT / "runs" / f"tennis-{arm}"
+        arms[arm] = {t: {(r := json.loads(l))["id"]: r for l in (d / f"{t}.jsonl").open(encoding="utf-8")} for t in TYPES}
+    rng = random.Random(SEED)
+    for tr in ("tour", "lower"):
+        sub = [m for m in ms if m["tier"] == tr]
+        y, mk = [m["a_won"] for m in sub], [m["p_a"] for m in sub]
+        boots = [[rng.randrange(len(sub)) for _ in sub] for _ in range(BOOT)]
+        print(f"\n{tr}-level: {len(sub)} matches | market AUC {auc(mk, y):.3f}")
+        print(f"  {'type':12} {'Jev AUC':>8} {'Nimble AUC':>11} {'Nimble-Jev [95% CI]':>24} {'mkt-Nimble [95% CI]':>24} {'rho(J,N)':>9} {'rho(N,mkt)':>10}")
+        for t in TYPES:
+            vj = [arms["jev"][t][m["id"]]["v"] for m in sub]
+            vn = [arms["nimble"][t][m["id"]]["v"] for m in sub]
+            def ci(f):
+                ds = sorted(f(b) for b in boots if 0 < sum(y[i] for i in b) < len(b))
+                return ds[int(.025 * len(ds))], ds[int(.975 * len(ds)) - 1]
+            pick = lambda v, b: [v[i] for i in b]
+            yb = lambda b: [y[i] for i in b]
+            d1 = ci(lambda b: auc(pick(vn, b), yb(b)) - auc(pick(vj, b), yb(b)))
+            d2 = ci(lambda b: auc(pick(mk, b), yb(b)) - auc(pick(vn, b), yb(b)))
+            same = lambda v: len(set(v)) > 1
+            print(f"  {t:12} {auc(vj, y):8.3f} {auc(vn, y):11.3f} {auc(vn, y) - auc(vj, y):+8.3f} [{d1[0]:+.3f}, {d1[1]:+.3f}] "
+                  f"{auc(mk, y) - auc(vn, y):+8.3f} [{d2[0]:+.3f}, {d2[1]:+.3f}] "
+                  f"{spearman(vj, vn) if same(vj) and same(vn) else 0:+9.2f} {spearman(vn, mk) if same(vn) else 0:+10.2f}")
+        aucs = [auc([arms["nimble"][t][m["id"]]["v"] for m in sub], y) for t in TYPES]
+        print(f"  Nimble AUC spread across types: {max(aucs) - min(aucs):.3f}")
+        for arm in ("jev", "nimble"):
+            pc = [arms[arm]["choice_both"][m["id"]]["v"] for m in sub]
+            print(f"  {arm:6} choice lean: mean |P(A) - 0.5| {statistics.mean(abs(p - .5) for p in pc):.3f}")
+        lv = [round(arms["nimble"]["strength"][m["id"]][k]) for m in sub for k in ("level_a", "level_b")]
+        print("  Nimble strength level per player (0 = unknown/lower ... 4 = elite): "
+              + " ".join(f"{i}:{lv.count(i) / len(lv):.0%}" for i in range(5)))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("sample", "run", "report", "extras"))
-    {"sample": sample, "run": run, "report": report, "extras": extras}[ap.parse_args().cmd]()
+    ap.add_argument("cmd", choices=("sample", "run", "report", "extras", "compare"))
+    ap.add_argument("--arm", choices=("jev", "nimble"), default="jev")
+    a = ap.parse_args()
+    ARM, OUT = a.arm, ROOT / "runs" / f"tennis-{a.arm}"
+    {"sample": sample, "run": run, "report": report, "extras": extras, "compare": compare}[a.cmd]()
