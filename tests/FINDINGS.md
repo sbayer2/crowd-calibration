@@ -519,3 +519,69 @@ hold-out periods differ in the Braves' form, so the selected variant's tuning ad
 - One season window per sport; the NBA and NHL windows are the second half of 2025-26.
 - The home/away convention was checked on two NFL games and is consistent with the 46-48% first-listed win rate. It was
   not checked game by game.
+
+## N-001 — Experiment 11: Nimble (local 9B) matches Jev on tennis; T-001 replicates across models
+
+**Run 2026-10-08, after pre-registration** (`docs/PREDICTIONS-NIMBLE.md`, commit 9d124c7).
+
+**Setup.** Nimble (Bespoke Labs, fine-tuned from Qwen3.5-9B, Apache 2.0, local Ollama 0.40, temperature 0) answered the
+experiment 7 tennis sample: the same 1,250 matches, state, five question types and wording. One deterministic run;
+6,250 answers in about 15 minutes, at no cost.
+
+**Result.**
+
+| Tier | Type | Jev AUC | Nimble AUC | Nimble − Jev [95% CI] | Market − Nimble [95% CI] | ρ(Jev, Nimble) |
+|---|---|---|---|---|---|---|
+| Tour (market 0.784) | yes/no about A | 0.683 | 0.688 | +0.005 [−0.020, +0.031] | +0.096 [+0.059, +0.136] | +0.83 |
+| | yes/no about each | 0.692 | 0.686 | −0.006 [−0.031, +0.021] | +0.099 [+0.061, +0.138] | +0.83 |
+| | choice, both orders | 0.690 | 0.688 | −0.002 [−0.026, +0.024] | +0.097 [+0.059, +0.136] | +0.84 |
+| | strength Score | 0.682 | 0.688 | +0.006 [−0.016, +0.030] | +0.096 [+0.059, +0.138] | +0.86 |
+| | win-likelihood bins | 0.688 | 0.679 | −0.008 [−0.030, +0.016] | +0.105 [+0.067, +0.146] | +0.86 |
+| Lower (market 0.734) | yes/no about A | 0.569 | 0.541 | −0.028 [−0.077, +0.019] | +0.193 [+0.134, +0.246] | +0.45 |
+| | yes/no about each | 0.560 | 0.527 | −0.033 [−0.082, +0.014] | +0.207 [+0.147, +0.261] | +0.41 |
+| | choice, both orders | 0.570 | 0.535 | −0.036 [−0.082, +0.011] | +0.199 [+0.140, +0.256] | +0.49 |
+| | strength Score | 0.542 | 0.524 | −0.018 [−0.061, +0.027] | +0.210 [+0.149, +0.266] | +0.48 |
+| | win-likelihood bins | 0.568 | 0.530 | −0.038 [−0.084, +0.010] | +0.204 [+0.145, +0.260] | +0.50 |
+
+- **AUC spread across types (Nimble):** tour-level 0.009, lower-level 0.017.
+- **Choice lean, mean |P(A) − 0.5|:**
+
+  | | Tour-level | Lower-level |
+  |---|---|---|
+  | Jev | 0.286 | 0.151 |
+  | Nimble | 0.222 | 0.094 |
+
+- **Nimble's strength levels (rounded):**
+
+  | | 0 | 1 | 2 | 3 | 4 |
+  |---|---|---|---|---|---|
+  | Tour-level | 19% | 35% | 25% | 14% | 7% |
+  | Lower-level | 76% | 21% | 3% | 0% | 0% |
+
+**Predictions.**
+- **N1 failed.** Nimble is below Jev on tour-level matches for only 3 of 5 types. All five differences are within
+  ±0.01, with CIs straddling 0. On lower-level matches Nimble is below Jev on all five (−0.02 to −0.04, each CI
+  including 0); the types are correlated, so this is one weak signal, not five.
+- **N2 held.** The market leads Nimble for every type in both tiers; every CI excludes 0.
+- **N3 held.** Nimble's tour-level AUC spread across types is 0.009 (≤ 0.03). The core T-001 result, that question
+  type barely matters once the model knows the players, replicates on a second, unrelated model.
+- **N4 held, strongly.** Nimble and Jev order tour-level matches at rank correlation +0.83 to +0.86.
+- **N5 failed.** Nimble's choice question leans *less* than Jev's in both tiers.
+  - **Correction:** the Georgia @ Alabama observation (Nimble 92% vs Jev 82%) did not generalise. One game is an
+    anecdote.
+- **N6 held.** Nimble puts 76% of lower-level players at "unknown or lower-level", almost exactly Jev's 76%.
+
+**Reading.**
+- **A free local 9B model reproduces Jev's tennis skill on known players.** Its AUC is the same to within ±0.01, and its
+  ordering agrees with Jev's at +0.83 to +0.86. What both express is a shared prior about players, probably from
+  overlapping public web text. Jev's tour-level knowledge is not special.
+- **Where knowledge thins (lower-level), Jev may know slightly more.** The difference is consistent in sign but not
+  significant.
+- **Question type does not matter on either model when knowledge exists** (T-001 and N3). The T-001 finding is about
+  this kind of model, not about Jev.
+- **Both models recognise the edge of their knowledge at the same rate** (76% "unknown" on lower-level players).
+
+**Limits.**
+- One sport and one sample.
+- Nimble's base, Qwen3.5-9B, has a training cutoff not stated on its page. If it is later than Jev's, Nimble's tie on
+  tour-level players could partly reflect more recent knowledge offsetting a smaller model.
