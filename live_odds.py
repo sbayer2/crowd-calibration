@@ -72,7 +72,7 @@ def load(name: str, default: Any) -> Any:
 
 
 def save(name: str, obj: Any) -> None:
-    tmp = OUT / (name + ".tmp")
+    tmp = OUT / f"{name}.{os.getpid()}.tmp"                                           # concurrent runs must not share it
     tmp.write_text(json.dumps(obj, indent=1))
     tmp.replace(OUT / name)
 
