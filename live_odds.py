@@ -1,4 +1,4 @@
-"""Experiments 9 (NHL) and 10 (MLB postseason), live — crowd or book? And what is Jev agreeing with?
+"""Experiments 9 (NHL), 10 (MLB postseason) and 12 (NCAA football, AP Top 25 games on two Saturdays), live — crowd or book? And what is Jev agreeing with?
 
 Collected going forward (The Odds API free tier has no history). A LaunchAgent runs `tick` every 5 minutes:
   - the schedule (free) from The Odds API, refreshed hourly;
@@ -11,8 +11,10 @@ Collected going forward (The Odds API free tier has no history). A LaunchAgent r
 Polymarket prices (1-minute history at the snapshot times) and results are fetched afterwards (`collect-poly`).
 Credit guard: at most DAILY_CAP odds calls per sport per UTC day; none below MIN_REMAINING credits (shared key).
 One LaunchAgent per sport; each sport keeps its own state in runs/<sport>/.
+NCAA football is limited to games on the listed Saturdays (US Central date) with an AP Top 25 team. The poll is read
+from ESPN's public rankings feed and frozen the first time a tick runs on each of those days.
 
-    .venv/bin/python live_odds.py --sport nhl tick            # what the LaunchAgents run (--sport nhl | mlb)
+    .venv/bin/python live_odds.py --sport nhl tick            # what the LaunchAgents run (--sport nhl | mlb | ncaaf)
     .venv/bin/python live_odds.py --sport mlb status
     .venv/bin/python live_odds.py --sport mlb collect-poly    # after games: Polymarket prices + results
 """
@@ -27,6 +29,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -35,7 +38,11 @@ load_dotenv(ROOT / ".env")                                # ODDS_API_KEY; the La
 SPORTS = {   # odds-api key, league name told to Jev, Polymarket tags (windowed scan), tags read whole (few, long-dated events)
     "nhl": {"key": "icehockey_nhl", "league": "NHL", "tags": ["nhl"], "whole": []},
     "mlb": {"key": "baseball_mlb", "league": "MLB", "tags": ["mlb"], "whole": ["mlb-playoffs"]},
+    "ncaaf": {"key": "americanfootball_ncaaf", "league": "NCAA football", "tags": ["cfb"], "whole": [],
+              "top25_days": ["2026-10-10", "2026-10-17"]},
 }
+CT = ZoneInfo("America/Chicago")
+RANKINGS = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
 SPORT = "nhl"
 OUT = ROOT / "runs" / SPORT
 API = f"https://api.the-odds-api.com/v4/sports/{SPORTS[SPORT]['key']}/"
@@ -75,6 +82,34 @@ def append(name: str, rec: dict[str, Any]) -> None:
         fh.write(json.dumps(rec) + "\n")
 
 
+def local_day(e: dict[str, Any]) -> str:
+    return iso(e["commence_time"]).astimezone(CT).date().isoformat()
+
+
+def in_scope(st: dict[str, Any], t: dt.datetime) -> list[dict[str, Any]]:
+    """The games this sport collects. All of them, except NCAA football: Top 25 games on the listed Saturdays."""
+    days = SPORTS[SPORT].get("top25_days")
+    if not days:
+        return st["events"]
+    top = st.setdefault("top25", {})
+    day = t.astimezone(CT).date().isoformat()
+    if day in days and day not in top:
+        try:
+            with urllib.request.urlopen(urllib.request.Request(RANKINGS, headers={"User-Agent": "crowd-calibration/0.1"}), timeout=30) as r:
+                ap = next(x for x in json.load(r)["rankings"] if x.get("shortName", "").startswith("AP"))
+            ranks = {x["team"]["location"] + " " + x["team"]["name"]: x["current"] for x in ap["ranks"]}
+            top[day] = {"poll": ap.get("headline"), "fetched_at": t.isoformat(), "ranks": ranks}
+            playing = {n for e in st["events"] if local_day(e) == day for n in (e["away_team"], e["home_team"])}
+            print(f"{t:%H:%M} froze {ap.get('headline')} for {day}; ranked teams without a game listed: "
+                  f"{sorted(n for n in ranks if n not in playing)}")
+        except (OSError, KeyError, StopIteration) as exc:                              # retried next tick
+            print(f"{t:%H:%M} rankings fetch failed ({exc!r})")
+    keep = [e for e in st["events"] if (rk := top.get(local_day(e), {}).get("ranks"))
+            and (e["away_team"] in rk or e["home_team"] in rk)]
+    st["scope"] = sorted(set(st.get("scope", [])) | {e["id"] for e in keep})
+    return keep
+
+
 def snapshot(keys: list[str], st: dict[str, Any], t: dt.datetime) -> None:
     day = t.date().isoformat()
     if st["calls"].get(day, 0) >= DAILY_CAP or int(st.get("remaining") or 500) < MIN_REMAINING:
@@ -99,6 +134,8 @@ def ask_jev(events: list[dict[str, Any]], st: dict[str, Any], t: dt.datetime) ->
         g = {"a": e["away_team"], "b": e["home_team"], "start": e["commence_time"]}       # Polymarket order: away vs. home
         out = {"id": e["id"], "away": e["away_team"], "home": e["home_team"], "commence": e["commence_time"],
                "asked_at": t.isoformat(), "v_away": {}, "answers": {}}
+        if (rk := st.get("top25", {}).get(local_day(e), {}).get("ranks")) is not None:
+            out["ranks"] = {"away": rk.get(e["away_team"]), "home": rk.get(e["home_team"])}
         for cfg in JEV_CONFIGS:
             stt, qs = request(cfg, SPORTS[SPORT]["league"], g)
             ans = jev.ask(stt, qs)["answers"]
@@ -124,7 +161,7 @@ def tick() -> None:
             st["events_at"] = t.isoformat()
         except OSError as exc:                                                         # network gap: keep the cached schedule
             print(f"{t:%H:%M} schedule refresh failed ({exc}); using cache from {st['events_at']}")
-    ahead = [e for e in st["events"] if dt.timedelta(0) < iso(e["commence_time"]) - t <= dt.timedelta(hours=EARLY_HORIZON_H)]
+    ahead = [e for e in in_scope(st, t) if dt.timedelta(0) < iso(e["commence_time"]) - t <= dt.timedelta(hours=EARLY_HORIZON_H)]
     due = []
     early_key = f"early:{t.date().isoformat()}"
     if t.hour >= EARLY_UTC_HOUR and early_key not in st["done"] and ahead:
@@ -157,6 +194,8 @@ def status() -> None:
         for k in s["keys"]:
             kinds[k.split(":")[0]] = kinds.get(k.split(":")[0], 0) + 1
     games = {e["id"] for s in snaps for e in s["events"]}
+    if "scope" in st:
+        games &= set(st["scope"])
     print(f"snapshots {len(snaps)} ({kinds}); games seen {len(games)}; Jev-asked {len(st.get('jev', []))}; "
           f"credits left {st.get('remaining')}; calls by day {st.get('calls')}")
 
@@ -166,6 +205,8 @@ def collect_poly() -> None:
     import braves
     snaps = [json.loads(l) for l in (OUT / "snapshots.jsonl").open()]
     games = {e["id"]: e for s in snaps for e in s["events"]}
+    if "scope" in (st := load("state.json", {})):
+        games = {k: g for k, g in games.items() if k in st["scope"]}
     poly = load("poly.json", {})
     t = now()
     retry = lambda g: g["id"] not in poly or (poly[g["id"]].get("away_won") is None and iso(g["commence_time"]) > t - dt.timedelta(days=3))
