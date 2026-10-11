@@ -39,7 +39,7 @@ SPORTS = {   # odds-api key, league name told to Jev, Polymarket tags (windowed 
     "nhl": {"key": "icehockey_nhl", "league": "NHL", "tags": ["nhl"], "whole": []},
     "mlb": {"key": "baseball_mlb", "league": "MLB", "tags": ["mlb"], "whole": ["mlb-playoffs"]},
     "ncaaf": {"key": "americanfootball_ncaaf", "league": "NCAA football", "tags": ["cfb"], "whole": [],
-              "top25_days": ["2026-10-10", "2026-10-17"]},
+              "top25_days": ["2026-10-10", "2026-10-17"], "open_events": True},   # cfb events stay open after the moneyline resolves
 }
 CT = ZoneInfo("America/Chicago")
 RANKINGS = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
@@ -226,18 +226,20 @@ def collect_poly() -> None:
             for m in e.get("markets", []):
                 if m.get("sportsMarketType") == "moneyline" and m.get("gameStartTime"):
                     found[str(m["id"])] = m
+    urls = [braves.EVENTS] + ([braves.EVENTS.replace("closed=true", "closed=false")] if SPORTS[SPORT].get("open_events") else [])
     for tag in SPORTS[SPORT]["tags"]:
-        d = lo
-        while d < t:
-            d2 = d + dt.timedelta(days=3)
-            for off in range(0, 2000, 100):
-                evs = braves.get(braves.EVENTS.format(tag=tag, off=off, a=d.strftime("%Y-%m-%dT%H:%M:%SZ"), b=d2.strftime("%Y-%m-%dT%H:%M:%SZ")))
-                if not evs:
-                    break
-                take(evs)
-                if len(evs) < 100:
-                    break
-            d = d2
+        for url in urls:
+            d = lo
+            while d < t:
+                d2 = d + dt.timedelta(days=3)
+                for off in range(0, 2000, 100):
+                    evs = braves.get(url.format(tag=tag, off=off, a=d.strftime("%Y-%m-%dT%H:%M:%SZ"), b=d2.strftime("%Y-%m-%dT%H:%M:%SZ")))
+                    if not evs:
+                        break
+                    take(evs)
+                    if len(evs) < 100:
+                        break
+                d = d2
     for tag in SPORTS[SPORT]["whole"]:
         for off in range(0, 1000, 100):
             evs = braves.get(f"https://gamma-api.polymarket.com/events?tag_slug={tag}&closed=true&limit=100&offset={off}")
