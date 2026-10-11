@@ -54,3 +54,12 @@ shared guard still applies: at most 16 calls per sport per UTC day, none below 2
 - The Mac must be awake through the last T−5 (about 21:25 CDT on 10-10).
 - On 10-17, a new `caffeinate` must cover about 09:00-22:00 CDT.
 - The LaunchAgent is unloaded after the 10-17 games resolve.
+
+## Amendment 2026-10-10, 19:20 CDT (operational, no change to the snapshot windows or measures)
+- LSU @ Kentucky moved its kickoff from 23:00 to 23:10 UTC after its T−60 snapshot. The collector read the schedule
+  only hourly, so it took the "T−5" for 23:00 at 22:48, 22 minutes before the real kickoff. The game has no snapshot
+  in the T−5 window and is recorded as missed.
+- From now on, all three arms update a game's start time from every odds snapshot, so a moved kickoff gets its own
+  T−5 window. This costs an extra credit when the move creates a new slot.
+- Stanford @ Notre Dame and Maryland @ Ohio State had no Pinnacle moneyline at any snapshot and are dropped by the
+  existing rule.

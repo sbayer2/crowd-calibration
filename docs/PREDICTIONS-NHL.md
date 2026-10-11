@@ -86,3 +86,9 @@ match, a Polymarket price within 10 minutes before the T−5 snapshot time, or a
 - From now on both LaunchAgents run every 2 minutes, not 5, giving 5-6 attempts per window. Each run writes a line to
   `runs/<sport>/heartbeat.log`, so gaps can be diagnosed.
 - The snapshot windows (T−60: 45-70 min; T−5: 1-12 min) are unchanged.
+
+## Amendment 2026-10-10, 19:20 CDT (operational, no change to collection rules or measures)
+- The collector now updates each game's start time from every odds snapshot, not only from the hourly schedule
+  refresh. An NCAA football kickoff moved 10 minutes and got no T−5 snapshot (`docs/PREDICTIONS-NCAAF.md`).
+- NHL T−5 snapshots are timed against the scheduled start (for example 18:10 CDT), and the puck often drops 5-6
+  minutes later. Lead times are measured from the scheduled start, as before.

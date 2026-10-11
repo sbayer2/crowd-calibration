@@ -121,6 +121,10 @@ def snapshot(keys: list[str], st: dict[str, Any], t: dt.datetime) -> None:
     append("snapshots.jsonl", {"keys": keys, "fetched_at": t.isoformat(), "credits": h, "events": data})
     for k in keys:
         st["done"][k] = t.isoformat()
+    moved = {e["id"]: e["commence_time"] for e in data}                              # kickoffs move: follow each snapshot,
+    for e in st["events"]:                                                             # not only the hourly schedule refresh
+        if e["id"] in moved and moved[e["id"]] != e["commence_time"] and iso(moved[e["id"]]) > t:
+            e["commence_time"] = moved[e["id"]]
     n_pin = sum(any(b["key"] == "pinnacle" for b in e["bookmakers"]) for e in data)
     print(f"{t:%H:%M} snapshot {keys}: {len(data)} games, {n_pin} with Pinnacle; credits left {h['x-requests-remaining']}")
 
