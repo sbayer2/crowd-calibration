@@ -45,3 +45,7 @@ a compressed range. J2 and J3 may look weaker than in the regular season for tha
 - From now on both LaunchAgents run every 2 minutes, not 5, giving 5-6 attempts per window. Each run writes a line to
   `runs/<sport>/heartbeat.log`, so gaps can be diagnosed.
 - The snapshot windows (T−60: 45-70 min; T−5: 1-12 min) are unchanged.
+
+## Amendment 2026-10-13, 19:04 CDT (operational)
+- The shared guard's daily cap rose from 16 to 24 calls per sport per UTC day. See the same-dated amendment in
+  `docs/PREDICTIONS-NHL.md`. No MLB snapshot was affected.

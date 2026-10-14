@@ -46,7 +46,7 @@ RANKINGS = "https://site.api.espn.com/apis/site/v2/sports/football/college-footb
 SPORT = "nhl"
 OUT = ROOT / "runs" / SPORT
 API = f"https://api.the-odds-api.com/v4/sports/{SPORTS[SPORT]['key']}/"
-EARLY_UTC_HOUR, EARLY_HORIZON_H, DAILY_CAP, MIN_REMAINING = 14, 20, 16, 25
+EARLY_UTC_HOUR, EARLY_HORIZON_H, DAILY_CAP, MIN_REMAINING = 14, 20, 24, 25
 WINDOWS = {"t60": (45, 70), "t5": (1, 12)}               # minutes before the slot's start
 JEV_CONFIGS = ["noul_both", "bins_plain"]
 

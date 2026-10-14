@@ -92,3 +92,14 @@ match, a Polymarket price within 10 minutes before the T−5 snapshot time, or a
   refresh. An NCAA football kickoff moved 10 minutes and got no T−5 snapshot (`docs/PREDICTIONS-NCAAF.md`).
 - NHL T−5 snapshots are timed against the scheduled start (for example 18:10 CDT), and the puck often drops 5-6
   minutes later. Lead times are measured from the scheduled start, as before.
+
+## Amendment 2026-10-13, 19:04 CDT (operational: the daily call cap; no change to windows or measures)
+- The guard's daily cap rose from 16 to 24 odds calls per sport per UTC day (`DAILY_CAP` in `live_odds.py`).
+- Why: on 2026-10-13 the 16 NHL games started every 15 minutes from 17:10 to 20:10 CDT, so their windows did not
+  share calls. The cap was reached at about 18:15 CDT and the guard skipped calls until the UTC day reset (19:00 CDT).
+- Lost to the cap, recorded as missed:
+  - T−5: St Louis @ Ottawa (18:40 CDT) and Vancouver @ NY Islanders (18:55 CDT).
+  - T−60: Minnesota @ Winnipeg (19:25 CDT) and Colorado @ Dallas (19:40 CDT).
+- The change was made at 19:04 CDT, after those windows had closed, so no snapshot was recovered.
+- Budget: about 13 credits a day across NHL and MLB against 376 left, so 24 still fits 2026-11-05. The 25-credit
+  floor is unchanged.
