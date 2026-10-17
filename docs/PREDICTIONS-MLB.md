@@ -49,3 +49,31 @@ a compressed range. J2 and J3 may look weaker than in the regular season for tha
 ## Amendment 2026-10-13, 19:04 CDT (operational)
 - The shared guard's daily cap rose from 16 to 24 calls per sport per UTC day. See the same-dated amendment in
   `docs/PREDICTIONS-NHL.md`. No MLB snapshot was affected.
+
+## Amendment 2026-10-17, 09:50 CDT (drop rule for postponed games; written before the rescheduled game's result)
+**Case.** ALCS Game 4, Rays @ Guardians (Odds API id `b9d2e07c`), listed for Fri 16 Oct 17:00 CDT.
+- **What happened:** the start was pushed to 19:00, 19:30, 20:10 and then 20:40 CDT. The game had left the Odds API
+  feed by 20:29.
+- **Polymarket:** the market (`mlb-tb-cle-2026-10-16`) now reads "originally scheduled for 6:00 PM ET on October 16,
+  2026 ... rescheduled to October 17, 2026 at 8:00 PM ET". Its price stayed at 0.495-0.515 from 18:00 Friday to 08:30
+  Saturday, so the game did not finish.
+- **Odds API:** it lists the rescheduled game under a new id (`bf41baae`) for Sat 17 Oct 19:00 CDT. Jev was asked
+  about it at the 17 Oct early snapshot.
+- **Game 5:** moved to Sun 18 Oct, 17:00 ET.
+
+**Rule (applies equally to experiments 9 and 12):**
+1. **Postponed listing:** dropped and counted as "postponed", with its snapshots and its Jev answer. A postponed
+   listing is one whose game did not start on the listed date.
+2. **Rescheduled game:** an ordinary game under its own listing. Its early snapshot, Jev answer, T−60 and T−5 are the
+   ones taken for the new start. If the Odds API keeps the old id, only snapshots and a Jev answer taken after the
+   listed start moved by more than 6 hours count.
+3. **Suspended game** (it started, then finished on a later day): kept under its original listing. Its pre-game T−5
+   and its final result stand.
+4. **Polymarket matching:** a rescheduled game is matched to the market whose description names that game, here Game 4
+   = `mlb-tb-cle-2026-10-16`. Start-time proximity alone does not decide the match. When `collect-poly` finds more
+   than one candidate, the match is made by hand and recorded in this file.
+5. **Before the analysis:** postponed versus suspended is checked against MLB's official game log. The Polymarket
+   description is not the final word.
+
+**Effect:** `b9d2e07c` is dropped as postponed, and MLB finished games go from 14 to 13. The rescheduled Game 4 is
+collected tonight as `bf41baae`.

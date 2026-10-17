@@ -103,3 +103,8 @@ match, a Polymarket price within 10 minutes before the T−5 snapshot time, or a
 - The change was made at 19:04 CDT, after those windows had closed, so no snapshot was recovered.
 - Budget: about 13 credits a day across NHL and MLB against 376 left, so 24 still fits 2026-11-05. The 25-credit
   floor is unchanged.
+
+## Amendment 2026-10-17, 09:50 CDT (drop rule for postponed games)
+- A postponed game's original listing is dropped and counted. The rescheduled game counts under its new start. A
+  suspended game keeps its original listing. Full rule: the same-dated amendment in `docs/PREDICTIONS-MLB.md`. No
+  NHL game has been postponed so far.

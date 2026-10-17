@@ -67,3 +67,8 @@ shared guard still applies: at most 16 calls per sport per UTC day, none below 2
 ## Amendment 2026-10-13, 19:04 CDT (operational)
 - The shared guard's daily cap rose from 16 to 24 calls per sport per UTC day (the "16 calls" above now reads 24).
   See the same-dated amendment in `docs/PREDICTIONS-NHL.md`. The 2026-10-10 slate never reached the cap.
+
+## Amendment 2026-10-17, 09:50 CDT (drop rule for postponed games)
+- A postponed game's original listing is dropped and counted. The rescheduled game counts under its new start. A
+  suspended game keeps its original listing. Full rule: the same-dated amendment in `docs/PREDICTIONS-MLB.md`. No
+  NCAAF game has been postponed so far.
