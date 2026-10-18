@@ -77,3 +77,9 @@ a compressed range. J2 and J3 may look weaker than in the regular season for tha
 
 **Effect:** `b9d2e07c` is dropped as postponed, and MLB finished games go from 14 to 13. The rescheduled Game 4 is
 collected tonight as `bf41baae`.
+
+## Amendment 2026-10-18, 14:00 CDT (operational: credit guard)
+- The guard now reads the credits left on the shared key from the newest snapshot of any sport, not from this arm's own
+  last call, which could be hours old. The floor (25) and the daily cap (24) are unchanged.
+- Until 11-06, the NCAA football arm also leaves 12 credits a day for this arm and the other arm. See the same-dated
+  amendment in `docs/PREDICTIONS-NCAAF.md`.

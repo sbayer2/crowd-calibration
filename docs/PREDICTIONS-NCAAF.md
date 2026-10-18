@@ -90,3 +90,38 @@ shared guard still applies: at most 16 calls per sport per UTC day, none below 2
 - The plan says the LaunchAgent is unloaded after the 10-17 games resolve. By the user's decision it is left running.
   With no listed Saturday ahead it collects no games and spends no credits (last snapshot 10-18 02:19 UTC). No data
   changes.
+
+## Amendment 2026-10-18, 14:00 CDT (scope: the rest of the regular season; pooling confirmed; credit reserve)
+Written before any 10-24 game is collected, and before any measure in this plan (C1-C3, J1-J4) has been computed on
+NCAA football data. At this point 24 games from 10-10 and 10-17 are usable; only counts have been looked at.
+
+**Games.** The arm continues on every Saturday through the conference championship Saturday: 10-24, 10-31, 11-07,
+11-14, 11-21, 11-28 and 12-05 (US Central date). The rule is unchanged: every game with at least one team in the AP
+Top 25, using the poll frozen at the first tick of each Saturday. Bowls and the College Football Playoff are not
+included. Neutral-site games are flagged, not dropped, as before.
+
+**Expected n.** About 20 games a Saturday, so about 140 more and about 165 in all. At the 10-10/10-17 usable rate
+(24 of 28) that is about 140 usable.
+
+**Analysis.**
+- **Pooling (C2, J1) is unchanged.** It was pre-registered on 10-10 in "Sample" above: NCAA football is pooled with
+  NHL and MLB, with sport as a fixed effect. Every game from the extended season is pooled under the same rule.
+- **Verdicts.** If at least 100 NCAA football games are usable at the end, the primary NCAA football report gives
+  verdicts on C1, J3 and J4 as experiment 9 does. Below 100, it stays descriptive as first planned.
+- The 10-10/10-17 games and the later games are analysed together. The two-Saturday subset is also reported on its
+  own, so the extension can be compared with the original pilot.
+
+**Credit budget.**
+- 293 credits are left on the shared free key. The key was created on 10-06, and The Odds API's documentation does
+  not say when the monthly quota resets, so the budget assumes no reset before 11-06.
+- NHL and MLB are expected to use about 200-210 credits through 11-05. This arm is expected to use about 16 credits on
+  each of 10-24 and 10-31.
+- **Reserve for experiment 9.** Until 11-06, an NCAA football odds call is skipped if the credits left would fall below
+  25 + 12 × (days remaining until 11-06). From 11-06 the floor is 25 again. Any skipped window is recorded as missed
+  and reported.
+- **Shared reading.** The guard now reads the credits left from the newest snapshot of any sport, not from this arm's
+  own last call; this applies to all three arms.
+- The daily cap (24 calls per sport per UTC day) is unchanged.
+
+**Operations.** The LaunchAgent stays loaded (see the 10-18 10:30 amendment). The Mac must be awake on each Saturday
+from about 10:00 CDT until the last T−5.

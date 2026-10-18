@@ -108,3 +108,9 @@ match, a Polymarket price within 10 minutes before the T−5 snapshot time, or a
 - A postponed game's original listing is dropped and counted. The rescheduled game counts under its new start. A
   suspended game keeps its original listing. Full rule: the same-dated amendment in `docs/PREDICTIONS-MLB.md`. No
   NHL game has been postponed so far.
+
+## Amendment 2026-10-18, 14:00 CDT (operational: credit guard)
+- The guard now reads the credits left on the shared key from the newest snapshot of any sport, not from this arm's own
+  last call, which could be hours old. The floor (25) and the daily cap (24) are unchanged.
+- Until 11-06, the NCAA football arm also leaves 12 credits a day for this arm and the other arm. See the same-dated
+  amendment in `docs/PREDICTIONS-NCAAF.md`.

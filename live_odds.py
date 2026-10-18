@@ -1,4 +1,4 @@
-"""Experiments 9 (NHL), 10 (MLB postseason) and 12 (NCAA football, AP Top 25 games on two Saturdays), live — crowd or book? And what is Jev agreeing with?
+"""Experiments 9 (NHL), 10 (MLB postseason) and 12 (NCAA football, AP Top 25 games on Saturdays), live — crowd or book? And what is Jev agreeing with?
 
 Collected going forward (The Odds API free tier has no history). A LaunchAgent runs `tick` every 5 minutes:
   - the schedule (free) from The Odds API, refreshed hourly;
@@ -9,7 +9,9 @@ Collected going forward (The Odds API free tier has no history). A LaunchAgent r
   - Jev, blind, once per game before it starts: two configs from experiment 8 (noul_both, bins_plain),
     told only the league, "Away vs. Home" and the date. Each request is fresh and stateless.
 Polymarket prices (1-minute history at the snapshot times) and results are fetched afterwards (`collect-poly`).
-Credit guard: at most DAILY_CAP odds calls per sport per UTC day; none below MIN_REMAINING credits (shared key).
+Credit guard: at most DAILY_CAP odds calls per sport per UTC day; none below MIN_REMAINING credits (shared key, read
+from the newest snapshot of any sport). Until NCAAF_RESERVE_UNTIL, NCAA football also leaves RESERVE_PER_DAY credits a
+day for the NHL and MLB arms.
 One LaunchAgent per sport; each sport keeps its own state in runs/<sport>/.
 NCAA football is limited to games on the listed Saturdays (US Central date) with an AP Top 25 team. The poll is read
 from ESPN's public rankings feed and frozen the first time a tick runs on each of those days.
@@ -40,7 +42,8 @@ SPORTS = {   # odds-api key, league name told to Jev, Polymarket tags (windowed 
     "nhl": {"key": "icehockey_nhl", "league": "NHL", "tags": ["nhl"], "whole": []},
     "mlb": {"key": "baseball_mlb", "league": "MLB", "tags": ["mlb"], "whole": ["mlb-playoffs"]},
     "ncaaf": {"key": "americanfootball_ncaaf", "league": "NCAA football", "tags": ["cfb"], "whole": [],
-              "top25_days": ["2026-10-10", "2026-10-17"], "open_events": True},   # cfb events stay open after the moneyline resolves
+              "top25_days": ["2026-10-10", "2026-10-17", "2026-10-24", "2026-10-31", "2026-11-07", "2026-11-14",
+                             "2026-11-21", "2026-11-28", "2026-12-05"], "open_events": True},   # cfb events stay open after the moneyline resolves
 }
 CT = ZoneInfo("America/Chicago")
 RANKINGS = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
@@ -48,6 +51,7 @@ SPORT = "nhl"
 OUT = ROOT / "runs" / SPORT
 API = f"https://api.the-odds-api.com/v4/sports/{SPORTS[SPORT]['key']}/"
 EARLY_UTC_HOUR, EARLY_HORIZON_H, DAILY_CAP, MIN_REMAINING = 14, 20, 24, 25
+NCAAF_RESERVE_UNTIL, RESERVE_PER_DAY = dt.date(2026, 11, 6), 12          # protect experiment 9 through its stop date
 WINDOWS = {"t60": (45, 70), "t5": (1, 12)}               # minutes before the slot's start
 JEV_CONFIGS = ["noul_both", "bins_plain"]
 
@@ -111,10 +115,33 @@ def in_scope(st: dict[str, Any], t: dt.datetime) -> list[dict[str, Any]]:
     return keep
 
 
+def shared_remaining(own: str | None) -> int:
+    """Credits left on the shared key: the newest snapshot of any sport (each state file sees only its own calls)."""
+    newest = (None, int(own or 500))
+    for sp in SPORTS:
+        p = ROOT / "runs" / sp / "snapshots.jsonl"
+        if not p.exists():
+            continue
+        with p.open("rb") as fh:
+            fh.seek(0, 2)
+            fh.seek(max(0, fh.tell() - 2_000_000))
+            lines = fh.read().splitlines()
+        if not lines:
+            continue
+        rec = json.loads(lines[-1])
+        if (left := rec["credits"].get("x-requests-remaining")) and (newest[0] is None or rec["fetched_at"] > newest[0]):
+            newest = (rec["fetched_at"], int(float(left)))
+    return newest[1]
+
+
 def snapshot(keys: list[str], st: dict[str, Any], t: dt.datetime) -> None:
     day = t.date().isoformat()
-    if st["calls"].get(day, 0) >= DAILY_CAP or int(st.get("remaining") or 500) < MIN_REMAINING:
-        print(f"{t:%H:%M} SKIP {keys}: credit guard (today {st['calls'].get(day, 0)}, remaining {st.get('remaining')})")
+    left = shared_remaining(st.get("remaining"))
+    floor = MIN_REMAINING
+    if SPORT == "ncaaf" and t.date() < NCAAF_RESERVE_UNTIL:
+        floor += RESERVE_PER_DAY * (NCAAF_RESERVE_UNTIL - t.date()).days
+    if st["calls"].get(day, 0) >= DAILY_CAP or left < floor:
+        print(f"{t:%H:%M} SKIP {keys}: credit guard (today {st['calls'].get(day, 0)}, remaining {left}, floor {floor})")
         return
     data, h = odds_api("odds", regions="eu", markets="h2h", oddsFormat="decimal", bookmakers="pinnacle,matchbook")
     st["calls"][day] = st["calls"].get(day, 0) + 1
