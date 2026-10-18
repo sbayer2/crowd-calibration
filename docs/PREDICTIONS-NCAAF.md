@@ -85,3 +85,8 @@ shared guard still applies: at most 16 calls per sport per UTC day, none below 2
 - **Effect.** The game matched (closed, Miami won). The 10-17 slate has 16 of 16 games with a Polymarket result. The
   result is Polymarket's own resolution, not anything this fix chose, but the fix was written after it was known and is
   reported as such.
+
+## Amendment 2026-10-18, 10:30 CDT (operational)
+- The plan says the LaunchAgent is unloaded after the 10-17 games resolve. By the user's decision it is left running.
+  With no listed Saturday ahead it collects no games and spends no credits (last snapshot 10-18 02:19 UTC). No data
+  changes.
