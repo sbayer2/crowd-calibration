@@ -15,10 +15,16 @@ day for the NHL and MLB arms.
 One LaunchAgent per sport; each sport keeps its own state in runs/<sport>/.
 NCAA football is limited to games on the listed Saturdays (US Central date) with an AP Top 25 team. The poll is read
 from ESPN's public rankings feed and frozen the first time a tick runs on each of those days.
+Experiment 13 (NCAA football only, docs/PREDICTIONS-SPREADS.md): the first tick at or after Wednesday 11:00 Central before
+each listed Saturday (late up to Thursday 11:00) reads Kalshi and Polymarket spread/total ladders (`ladders.py`), then
+Pinnacle + Matchbook spreads and totals (2 credits, same guard), for that Saturday's games with a team in the current AP
+poll; then asks Jev, blind, for the margin and the total. Records: runs/ncaaf/t72.jsonl (raw odds: t72_odds.jsonl).
+`collect-scores` stores ESPN final scores (runs/ncaaf/scores.json).
 
     .venv/bin/python live_odds.py --sport nhl tick            # what the LaunchAgents run (--sport nhl | mlb | ncaaf)
     .venv/bin/python live_odds.py --sport mlb status
     .venv/bin/python live_odds.py --sport mlb collect-poly    # after games: Polymarket prices + results
+    .venv/bin/python live_odds.py --sport ncaaf collect-scores  # after games: ESPN final scores
 """
 
 from __future__ import annotations
@@ -47,6 +53,7 @@ SPORTS = {   # odds-api key, league name told to Jev, Polymarket tags (windowed 
 }
 CT = ZoneInfo("America/Chicago")
 RANKINGS = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
+SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates={d}&groups=80&limit=500"
 SPORT = "nhl"
 OUT = ROOT / "runs" / SPORT
 API = f"https://api.the-odds-api.com/v4/sports/{SPORTS[SPORT]['key']}/"
@@ -54,6 +61,7 @@ EARLY_UTC_HOUR, EARLY_HORIZON_H, DAILY_CAP, MIN_REMAINING = 14, 20, 24, 25
 NCAAF_RESERVE_UNTIL, RESERVE_PER_DAY = dt.date(2026, 11, 6), 12          # protect experiment 9 through its stop date
 WINDOWS = {"t60": (45, 70), "t5": (1, 12)}               # minutes before the slot's start
 JEV_CONFIGS = ["noul_both", "bins_plain"]
+T72_AT, T72_LATE = dt.time(11, 0), dt.timedelta(minutes=15)     # Wednesday 11:00 Central; flagged late after 15 minutes
 
 
 def now() -> dt.datetime:
@@ -91,6 +99,17 @@ def local_day(e: dict[str, Any]) -> str:
     return iso(e["commence_time"]).astimezone(CT).date().isoformat()
 
 
+def get(url: str) -> Any:
+    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "crowd-calibration/0.1"}), timeout=30) as r:
+        return json.load(r)
+
+
+def ap_poll() -> tuple[str | None, dict[str, int]]:
+    """The current AP poll from ESPN: (headline, {Odds API-style team name: rank})."""
+    ap = next(x for x in get(RANKINGS)["rankings"] if x.get("shortName", "").startswith("AP"))
+    return ap.get("headline"), {x["team"]["location"] + " " + x["team"]["name"]: x["current"] for x in ap["ranks"]}
+
+
 def in_scope(st: dict[str, Any], t: dt.datetime) -> list[dict[str, Any]]:
     """The games this sport collects. All of them, except NCAA football: Top 25 games on the listed Saturdays."""
     days = SPORTS[SPORT].get("top25_days")
@@ -100,12 +119,10 @@ def in_scope(st: dict[str, Any], t: dt.datetime) -> list[dict[str, Any]]:
     day = t.astimezone(CT).date().isoformat()
     if day in days and day not in top:
         try:
-            with urllib.request.urlopen(urllib.request.Request(RANKINGS, headers={"User-Agent": "crowd-calibration/0.1"}), timeout=30) as r:
-                ap = next(x for x in json.load(r)["rankings"] if x.get("shortName", "").startswith("AP"))
-            ranks = {x["team"]["location"] + " " + x["team"]["name"]: x["current"] for x in ap["ranks"]}
-            top[day] = {"poll": ap.get("headline"), "fetched_at": t.isoformat(), "ranks": ranks}
+            headline, ranks = ap_poll()
+            top[day] = {"poll": headline, "fetched_at": t.isoformat(), "ranks": ranks}
             playing = {n for e in st["events"] if local_day(e) == day for n in (e["away_team"], e["home_team"])}
-            print(f"{t:%H:%M} froze {ap.get('headline')} for {day}; ranked teams without a game listed: "
+            print(f"{t:%H:%M} froze {headline} for {day}; ranked teams without a game listed: "
                   f"{sorted(n for n in ranks if n not in playing)}")
         except (OSError, KeyError, StopIteration) as exc:                              # retried next tick
             print(f"{t:%H:%M} rankings fetch failed ({exc!r})")
@@ -118,8 +135,7 @@ def in_scope(st: dict[str, Any], t: dt.datetime) -> list[dict[str, Any]]:
 def shared_remaining(own: str | None) -> int:
     """Credits left on the shared key: the newest snapshot of any sport (each state file sees only its own calls)."""
     newest = (None, int(own or 500))
-    for sp in SPORTS:
-        p = ROOT / "runs" / sp / "snapshots.jsonl"
+    for p in (ROOT / "runs" / sp / f for sp in SPORTS for f in ("snapshots.jsonl", "t72_odds.jsonl")):
         if not p.exists():
             continue
         with p.open("rb") as fh:
@@ -134,14 +150,21 @@ def shared_remaining(own: str | None) -> int:
     return newest[1]
 
 
-def snapshot(keys: list[str], st: dict[str, Any], t: dt.datetime) -> None:
+def credit_ok(keys: list[str], st: dict[str, Any], t: dt.datetime, cost: int = 1) -> bool:
     day = t.date().isoformat()
     left = shared_remaining(st.get("remaining"))
     floor = MIN_REMAINING
     if SPORT == "ncaaf" and t.date() < NCAAF_RESERVE_UNTIL:
         floor += RESERVE_PER_DAY * (NCAAF_RESERVE_UNTIL - t.date()).days
-    if st["calls"].get(day, 0) >= DAILY_CAP or left < floor:
+    if st["calls"].get(day, 0) >= DAILY_CAP or left - cost < floor - 1:
         print(f"{t:%H:%M} SKIP {keys}: credit guard (today {st['calls'].get(day, 0)}, remaining {left}, floor {floor})")
+        return False
+    return True
+
+
+def snapshot(keys: list[str], st: dict[str, Any], t: dt.datetime) -> None:
+    day = t.date().isoformat()
+    if not credit_ok(keys, st, t):
         return
     data, h = odds_api("odds", regions="eu", markets="h2h", oddsFormat="decimal", bookmakers="pinnacle,matchbook")
     st["calls"][day] = st["calls"].get(day, 0) + 1
@@ -215,7 +238,112 @@ def tick() -> None:
             ask_jev(soon, st, t)
         except Exception as exc:                                                       # Jev trouble must not stop odds
             print(f"{t:%H:%M} Jev error: {exc}")
+    if SPORT == "ncaaf":
+        try:
+            t72(st, t)
+        except Exception as exc:                                                       # not marked done: the next tick retries
+            print(f"{t:%H:%M} t72 failed ({exc!r}); will retry while the window is open")
     save("state.json", st)
+
+
+def t72_window(st: dict[str, Any], t: dt.datetime) -> tuple[str, dt.date, dt.datetime] | None:
+    """The experiment 13 snapshot whose window (Wednesday 11:00 Central to Thursday 11:00) holds `t`, if any."""
+    for d in SPORTS[SPORT].get("top25_days", []):
+        sat = dt.date.fromisoformat(d)
+        opens = dt.datetime.combine(sat - dt.timedelta(days=3), T72_AT, CT)
+        if opens <= t < opens + dt.timedelta(days=1):
+            return f"t72:{d}", sat, opens
+    return None
+
+
+def pinnacle_lines(e: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Pinnacle's margin line (away - home) and total, with each side's no-vig probability."""
+    b = next((b for b in (e or {}).get("bookmakers", []) if b["key"] == "pinnacle"), None)
+    if not b:
+        return None
+    out = {"last_update": b.get("last_update")}
+    for m in b["markets"]:
+        o = {x["name"]: x for x in m["outcomes"]}
+        if m["key"] == "spreads" and e["away_team"] in o and e["home_team"] in o:
+            a, h = o[e["away_team"]], o[e["home_team"]]
+            out["spread"] = -a["point"]                                                # away +7.5 -> margin line -7.5
+            out["p_away_covers"] = (1 / a["price"]) / (1 / a["price"] + 1 / h["price"])
+        if m["key"] == "totals" and "Over" in o and "Under" in o:
+            out["total"] = o["Over"]["point"]
+            out["p_over"] = (1 / o["Over"]["price"]) / (1 / o["Over"]["price"] + 1 / o["Under"]["price"])
+    return out
+
+
+def t72(st: dict[str, Any], t: dt.datetime) -> None:
+    """Experiment 13: every source read at one moment, about three days before the Saturday; then Jev."""
+    import ladders
+    w = t72_window(st, t)
+    if not w:
+        return
+    key, sat, opens = w
+    wk = st.setdefault("t72", {}).setdefault(key, {"games": [], "jev": []})
+    if key not in st["done"]:
+        headline, ranks = ap_poll()
+        games = [e for e in st["events"] if local_day(e) == sat.isoformat() and (e["away_team"] in ranks or e["home_team"] in ranks)]
+        if not games:
+            print(f"{t:%H:%M} {key}: no ranked games listed yet; will retry")
+            return
+        kal = ladders.kalshi_ladders(games, sat)                                      # free sources first: if one fails,
+        pol = ladders.poly_ladders(games, sat, team_in)                                # no credits are spent
+        if not credit_ok([key], st, t, cost=2):
+            return
+        lo = dt.datetime.combine(sat, dt.time(0), CT).astimezone(dt.timezone.utc)
+        data, h = odds_api("odds", regions="eu", markets="spreads,totals", oddsFormat="decimal", bookmakers="pinnacle,matchbook",
+                           commenceTimeFrom=f"{lo:%Y-%m-%dT%H:%M:%SZ}", commenceTimeTo=f"{lo + dt.timedelta(days=1):%Y-%m-%dT%H:%M:%SZ}")
+        day = t.date().isoformat()
+        st["calls"][day] = st["calls"].get(day, 0) + 1
+        st["remaining"] = h["x-requests-remaining"]
+        append("t72_odds.jsonl", {"keys": [key], "fetched_at": t.isoformat(), "credits": h, "events": data})
+        odds = {e["id"]: e for e in data}
+        late = t - opens > T72_LATE
+        append("t72.jsonl", {"kind": "poll", "key": key, "taken_at": t.isoformat(), "poll": headline, "ranks": ranks})
+        for g in games:
+            append("t72.jsonl", {"kind": "market", "key": key, "id": g["id"], "away": g["away_team"], "home": g["home_team"],
+                                 "commence": g["commence_time"], "taken_at": t.isoformat(), "late": late,
+                                 "lead_h": round((iso(g["commence_time"]) - t).total_seconds() / 3600, 2),
+                                 "ranks": {"away": ranks.get(g["away_team"]), "home": ranks.get(g["home_team"])},
+                                 "pinnacle": pinnacle_lines(odds.get(g["id"])), "kalshi": kal.get(g["id"]), "polymarket": pol.get(g["id"])})
+        wk["games"] = [{k: g[k] for k in ("id", "away_team", "home_team", "commence_time")} for g in games]
+        st["done"][key] = t.isoformat()
+        save("state.json", st)                                                         # the snapshot stands even if Jev fails
+        line = lambda src, k: sum(1 for x in src.values() if (x.get(k) or {}).get("line") is not None)
+        print(f"{t:%H:%M} {key}{' (late)' if late else ''}: {len(games)} games; Pinnacle {sum(bool(pinnacle_lines(odds.get(g['id']))) for g in games)}, "
+              f"Kalshi spread/total lines {line(kal, 'spread')}/{line(kal, 'total')}, Polymarket {line(pol, 'spread')}/{line(pol, 'total')}; "
+              f"credits left {h['x-requests-remaining']}")
+    todo = [g for g in wk["games"] if g["id"] not in wk["jev"]]
+    if todo:
+        with ThreadPoolExecutor(4) as pool:
+            for g, rec in zip(todo, pool.map(lambda g: t72_jev(g, sat, t), todo)):
+                if rec:
+                    append("t72.jsonl", rec)
+                    wk["jev"].append(g["id"])
+        print(f"{t:%H:%M} {key}: Jev answered {len(wk['jev'])}/{len(wk['games'])}")
+
+
+def t72_jev(g: dict[str, Any], sat: dt.date, t: dt.datetime) -> dict[str, Any] | None:
+    """Blind Jev: one fresh request per game with the margin and total questions. None on failure (retried next tick)."""
+    import jev
+    import ladders
+    from braves_opt import instr
+    a, h = g["away_team"], g["home_team"]
+    qs = {"margin": {"type": "score", "instructions": instr("Which team wins this game, and by how many points?", "plain"),
+                     "criteria": [l.format(a=a, h=h) for l in ladders.MARGIN_LEVELS]},
+          "total": {"type": "score", "instructions": instr("How many points will the two teams score in total?", "plain"),
+                    "criteria": ladders.TOTAL_LEVELS}}
+    try:
+        ans = jev.ask(f"NCAA football game: {a} vs. {h}, {sat}.", qs)["answers"]
+        m_med, m_ev = ladders.dist_line(ans["margin"]["probabilities"], ladders.MARGIN_BINS, ladders.MARGIN_MIDS)
+        t_med, t_ev = ladders.dist_line(ans["total"]["probabilities"], ladders.TOTAL_BINS, ladders.TOTAL_MIDS)
+    except Exception as exc:                                                           # Jev trouble must not stop the arm
+        print(f"{t:%H:%M} t72 Jev error for {a} @ {h}: {exc}")
+        return None
+    return {"kind": "jev", "id": g["id"], "away": a, "home": h, "asked_at": now().isoformat(), "answers": ans,
+            "margin_median": m_med, "margin_ev": m_ev, "total_median": t_med, "total_ev": t_ev}
 
 
 def status() -> None:
@@ -303,11 +431,56 @@ def collect_poly() -> None:
     print(f"Polymarket: {len(todo)} new games; matched {ok} of {len(poly)} total")
 
 
+def collect_scores() -> None:
+    """After games: ESPN final scores for experiment 13's games and the experiment 12 scope (runs/<sport>/scores.json)."""
+    import unicodedata
+    norm = lambda n: unicodedata.normalize("NFKD", n).encode("ascii", "ignore").decode().replace("'", "").lower()
+    games = {}
+    if (OUT / "t72.jsonl").exists():
+        for l in (OUT / "t72.jsonl").open():
+            if (r := json.loads(l))["kind"] == "market":
+                games[r["id"]] = {"id": r["id"], "away_team": r["away"], "home_team": r["home"], "commence_time": r["commence"]}
+    st = load("state.json", {})
+    if (OUT / "snapshots.jsonl").exists():
+        for l in (OUT / "snapshots.jsonl").open():
+            for e in json.loads(l)["events"]:
+                if e["id"] in st.get("scope", []):
+                    games.setdefault(e["id"], e)
+    scores = load("scores.json", {})
+    t = now()
+    todo = [g for g in games.values() if not scores.get(g["id"], {}).get("completed")
+            and iso(g["commence_time"]) < t - dt.timedelta(hours=5) and iso(g["commence_time"]) > t - dt.timedelta(days=10)]
+    if not todo:
+        print("nothing new to collect")
+        return
+    days = sorted({local_day(g) for g in todo})
+    board = {}
+    for d in days + [(dt.date.fromisoformat(d) + dt.timedelta(days=1)).isoformat() for d in days]:
+        for e in get(SCOREBOARD.format(d=d.replace("-", "")))["events"]:
+            c = e["competitions"][0]
+            teams = {norm(x["team"]["displayName"]): x for x in c["competitors"]}
+            board[frozenset(teams)] = {"espn_id": e["id"], "date": e["date"], "status": c["status"]["type"]["name"],
+                                       "completed": c["status"]["type"]["completed"], "neutral": c.get("neutralSite"), "teams": teams}
+    for g in todo:
+        a, h = norm(g["away_team"]), norm(g["home_team"])
+        b = board.get(frozenset((a, h)))
+        if not b:
+            scores[g["id"]] = {"match": "none", "away": g["away_team"], "home": g["home_team"]}
+            continue
+        sa, sh = b["teams"][a].get("score"), b["teams"][h].get("score")
+        scores[g["id"]] = {"away": g["away_team"], "home": g["home_team"], "espn_id": b["espn_id"], "status": b["status"],
+                           "completed": b["completed"], "neutral": b["neutral"], "espn_home": b["teams"][h]["homeAway"] == "home",
+                           "away_score": int(sa) if sa not in (None, "") else None, "home_score": int(sh) if sh not in (None, "") else None}
+    save("scores.json", scores)
+    done = sum(1 for v in scores.values() if v.get("completed"))
+    print(f"ESPN: {len(todo)} games checked; {done} final of {len(scores)}; unmatched {sum(1 for v in scores.values() if v.get('match') == 'none')}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--sport", choices=tuple(SPORTS), default="nhl")
-    ap.add_argument("cmd", choices=("tick", "status", "collect-poly"))
+    ap.add_argument("cmd", choices=("tick", "status", "collect-poly", "collect-scores"))
     a = ap.parse_args()
     SPORT, OUT = a.sport, ROOT / "runs" / a.sport
     API = f"https://api.the-odds-api.com/v4/sports/{SPORTS[a.sport]['key']}/"
-    {"tick": tick, "status": status, "collect-poly": collect_poly}[a.cmd]()
+    {"tick": tick, "status": status, "collect-poly": collect_poly, "collect-scores": collect_scores}[a.cmd]()

@@ -131,3 +131,26 @@ Sign convention: **margin = away score − home score.** A Pinnacle line of home
 - `ladders.py` (new): reads the Kalshi and Polymarket ladders and computes the line.
 - Jev questions alongside the existing ones (`sports_jev.py` pattern). Records go to `runs/ncaaf/t72.jsonl`.
 - Analysis: written before 12-05, run once at the end.
+
+## Amendment 2026-10-18, 17:30 CDT (implementation details; written before any spread or total was collected)
+- **Snapshot time:** 11:00 US Central local time, so 16:00 UTC through 10-28 and 17:00 UTC from 11-04 (after the
+  change to CST). Late: taken more than 15 minutes after the window opened.
+- **Games:** that Saturday's games in the Odds API schedule with a team in the AP poll read at the snapshot. The poll
+  itself is stored with the records.
+- **Jev's bins** as continuous intervals, with margins and totals as integers:
+  - Margin: home 21+ = [-35, -21], 14-20 = [-21, -14], 7-13 = [-14, -7], 1-6 = [-7, 0], and the mirror for the away
+    team. Midpoints for the expected value: ±3.5, ±10.5, ±17.5, ±28.
+  - Total: [25, 35), [35, 42), [42, 49), [49, 56), [56, 63), [63, 70), [70, 85]. Midpoints: 30, 38.5, 45.5, 52.5,
+    59.5, 66.5, 77.5.
+  - The median is interpolated linearly within the bin where the cumulative probability reaches 0.5.
+- **Jev's request:** the state is "NCAA football game: {away} vs. {home}, {Saturday's date}."; the two questions are
+  asked together, with plain instructions. A failed request is retried at later ticks while the window is open; each
+  answer keeps its own time.
+- **Ladders:** Kalshi rungs come from the open markets of both series, matched by the two team names and the date in
+  each market's rules. Polymarket rungs come from the event whose moneyline matches the game, as in `collect-poly`.
+  Rungs at the same x are averaged before the monotone fit.
+- **Pinnacle:** one call for the Saturday's games (`commenceTimeFrom` and `commenceTimeTo` set to the Central day).
+  The guard allows it with at least floor + 1 credits left, so it ends no lower than an h2h call can (floor - 1).
+- **Offline check on 10-18** (free sources only; nothing stored): for 17 ranked games listed for 10-24, Kalshi gave
+  15 usable spread and 15 total lines and Polymarket 16 and 11. Where both had a line they agreed within about 0.5
+  points.
