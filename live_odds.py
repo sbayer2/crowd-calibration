@@ -25,6 +25,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -204,6 +205,11 @@ def status() -> None:
           f"credits left {st.get('remaining')}; calls by day {st.get('calls')}")
 
 
+def team_in(name: str, team: str) -> bool:
+    """A Polymarket outcome name inside an Odds API team name; a trailing state tag ("Miami (FL)") may be dropped."""
+    return name in team or re.sub(r" \([A-Z]{2}\)$", "", name) in team
+
+
 def collect_poly() -> None:
     """After games: match each game to its Polymarket moneyline, store the 1-minute price history and the result."""
     import braves
@@ -252,7 +258,7 @@ def collect_poly() -> None:
     for g in todo:
         cands = [m for m in markets if abs(braves.ts(m["gameStartTime"]) - iso(g["commence_time"])) < dt.timedelta(hours=3)
                  and (names := json.loads(m["outcomes"])) and len(names) == 2
-                 and names[0] in g["away_team"] and names[1] in g["home_team"]]
+                 and team_in(names[0], g["away_team"]) and team_in(names[1], g["home_team"])]
         if len(cands) != 1:
             poly[g["id"]] = {"match": f"{len(cands)} candidates"}
             continue

@@ -72,3 +72,16 @@ shared guard still applies: at most 16 calls per sport per UTC day, none below 2
 - A postponed game's original listing is dropped and counted. The rescheduled game counts under its new start. A
   suspended game keeps its original listing. Full rule: the same-dated amendment in `docs/PREDICTIONS-MLB.md`. No
   NCAAF game has been postponed so far.
+
+## Amendment 2026-10-18, 08:30 CDT (Polymarket name matching; written after the game's result was known)
+- **Case.** Florida State @ Miami (10-17, Odds API id `33f259d8`) did not match its Polymarket market
+  (`cfb-flst-mia-2026-10-17`, market 5353447). Polymarket's outcome name is "Miami (FL)", which is not a substring of
+  the Odds API name "Miami Hurricanes", so `collect-poly` found 0 candidates.
+- **Fix.** The matcher now also accepts an outcome name with a trailing two-letter state tag removed ("Miami (FL)" ->
+  "Miami"). The other conditions are unchanged: start within 3 hours, both teams in away/home order, and exactly one
+  candidate, otherwise no match. The rule is general and is in the code (`team_in` in `live_odds.py`); it applies to
+  all three arms. NHL and MLB names carry no state tags, and games that already matched are not retried, so no existing
+  match changes.
+- **Effect.** The game matched (closed, Miami won). The 10-17 slate has 16 of 16 games with a Polymarket result. The
+  result is Polymarket's own resolution, not anything this fix chose, but the fix was written after it was known and is
+  reported as such.
