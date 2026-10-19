@@ -402,13 +402,14 @@ def collect_poly() -> None:
                         break
                 d = d2
     for tag in SPORTS[SPORT]["whole"]:
-        for off in range(0, 1000, 100):
-            evs = braves.get(f"https://gamma-api.polymarket.com/events?tag_slug={tag}&closed=true&limit=100&offset={off}")
-            if not evs:
-                break
-            take(evs)
-            if len(evs) < 100:
-                break
+        for closed in ("true", "false"):                                             # a game's market can resolve while
+            for off in range(0, 1000, 100):                                            # its event stays open
+                evs = braves.get(f"https://gamma-api.polymarket.com/events?tag_slug={tag}&closed={closed}&limit=100&offset={off}")
+                if not evs:
+                    break
+                take(evs)
+                if len(evs) < 100:
+                    break
     markets = list(found.values())
     for g in todo:
         cands = [m for m in markets if abs(braves.ts(m["gameStartTime"]) - iso(g["commence_time"])) < dt.timedelta(hours=3)

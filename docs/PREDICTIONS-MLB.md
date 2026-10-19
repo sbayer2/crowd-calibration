@@ -83,3 +83,13 @@ collected tonight as `bf41baae`.
   last call, which could be hours old. The floor (25) and the daily cap (24) are unchanged.
 - Until 11-06, the NCAA football arm also leaves 12 credits a day for this arm and the other arm. See the same-dated
   amendment in `docs/PREDICTIONS-NCAAF.md`.
+
+## Amendment 2026-10-19, 09:30 CDT (Polymarket matching; written after the game's result was known)
+- **Case.** ALCS Game 5, Rays @ Guardians (Odds API id `f4ca2d8a`), 18 Oct 21:10 UTC. Polymarket lists it as
+  `mlb-tb-cle-2026-10-17` (the slug kept the pre-reschedule date), moneyline start 21:08 UTC. Its moneyline had
+  resolved, but the event was still open, and `collect-poly` read the `mlb-playoffs` tag for closed events only.
+- **Fix.** That scan now reads open events too. The result still comes from the market's own resolved prices
+  (unresolved markets give no result), and matching is unchanged: team names plus a start within 3 hours. One
+  candidate was found, so no hand match was needed.
+- **Effect.** MLB matches go from 14 to 15 of 18 listings. The three unmatched are the two known duplicate listings
+  and the postponed Game 4 listing (`b9d2e07c`). NHL and NCAA football do not use this scan.
