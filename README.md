@@ -8,7 +8,7 @@ answers with the market and with what actually happened. Every experiment is pre
 before any data), run on fresh, independent Jev calls, and recorded in `tests/FINDINGS.md`, including the predictions
 that failed.
 
-## Now running: is Polymarket's sports price the crowd or the bookmaker? (experiments 9 and 10)
+## Now running: is Polymarket's sports price the crowd or the bookmaker? (experiments 9, 10, 12 and 13)
 
 Polymarket pays market makers to quote near its price, and practitioners say sports quotes are copied from sharp
 sportsbooks such as Pinnacle. If so, the "wisdom of the crowd" Jev was being compared with may be largely a
@@ -20,9 +20,16 @@ bookmaker's line. A **live collector** records three forecasters for every game,
 | **Polymarket** | 1-minute price history and the result | fetched after the games |
 | **Jev** | blind answer: told only the league, "Away vs. Home" and the date | once per game, before it starts |
 
-- **Experiment 9:** NHL, 2026-10-06 to 11-05, about 400 games ([pre-registration](docs/PREDICTIONS-NHL.md)).
-- **Experiment 10:** MLB postseason, Division Series through the World Series, a pilot of about 40 games
+- **Experiment 9:** NHL, 2026-10-06 to 11-05 ([pre-registration](docs/PREDICTIONS-NHL.md)). The plan expected about
+  400 games; the schedule and missed windows point to about 210 usable (89 on 10-20).
+- **Experiment 10:** MLB postseason, Division Series through the World Series, a pilot of about 20 games
   ([pre-registration](docs/PREDICTIONS-MLB.md)).
+- **Experiment 12:** NCAA football, every game with an AP Top 25 team on Saturdays from 10-10 to 12-05, pooled with NHL
+  and MLB for C2 and J1 ([pre-registration](docs/PREDICTIONS-NCAAF.md)).
+- **Experiment 13:** NCAA football spreads and totals three days out. Every Wednesday before a Top 25 Saturday, one
+  snapshot reads Pinnacle's lines, the Kalshi and Polymarket ladders (each turned into one line), and blind Jev's
+  margin and total. Do the exchanges price the line like the book, and how much of a spread can a model with no
+  current information reproduce? ([pre-registration](docs/PREDICTIONS-SPREADS.md))
 
 Pre-registered tests:
 - **Crowd or book.**
@@ -32,6 +39,7 @@ Pre-registered tests:
 - **What Jev agrees with.**
   - **J1:** does Jev side with the crowd or the book where they differ?
   - **J2:** is Jev closer to the early line (mostly a strength rating) than to the close (which adds game-day news)?
+  - **J3, J4:** Jev trails both sources, and tracks the book more in college football, where strength gaps are wide.
 
 Agreement alone cannot separate copying from two good forecasters reaching the same answer, so C2 and C3 are the
 decisive tests.
@@ -45,6 +53,9 @@ decisive tests.
 | B-001, O-001 | Can rewording the question make Jev match the market on Braves games? | No. 220 request configurations, none matched Polymarket in every part of the season; the best was within luck. The wording changes Jev's numbers, not its accuracy. |
 | T-001, T-002 | Tennis: does Jev know the players? | Where it knows them, yes: AUC 0.69 on tour-level matches (market 0.78), about 0.55 on Challenger/ITF. All question types score alike once Jev has knowledge. Jev adds nothing to the market, and its strength score flags players it doesn't know. |
 | S-001 | Does the Braves-optimal wording carry over to MLB, NFL, NBA, NHL? | No. It never helps, and it significantly hurts MLB. Jev can't infer home team from "A vs. B" (Polymarket lists away first). |
+| N-001 | Is the tennis result specific to Jev? | No. A free local 9B model (Nimble) matches Jev's AUC within ±0.01 and orders matches like it (ρ 0.83-0.86). |
+| G-001 | Tonight's games, 27 resolved (counts only) | Nobody beat a coin flip: market Brier 0.249, Jev 0.264. |
+| K-001 | Pop culture, question and options only | The crowd wins easily: Brier 0.071 against Jev's 0.190; top pick right in 11 of 12 events against Jev's 3. |
 
 **What carries across:** with only a matchup in the state, Jev expresses a **reputational prior**. The question type
 and wording decide how that prior is expressed, not what it knows. The crowd's edge is current information: 2026
@@ -55,10 +66,13 @@ form, injuries, lineups.
 ```bash
 python3 -m venv .venv && .venv/bin/pip install python-dotenv     # + torch transformers huggingface_hub for the openjev arm
 printf 'AI_GATEWAY_API_KEY=...\nODDS_API_KEY=...\n' > .env        # Vercel AI Gateway key (Jev); The Odds API key (free tier)
-.venv/bin/python live_odds.py --sport nhl tick            # one collection pass (run every 5 min by a LaunchAgent)
+.venv/bin/python live_odds.py --sport nhl tick            # one collection pass (run every 2 min by a LaunchAgent)
 .venv/bin/python live_odds.py --sport nhl status
 .venv/bin/python live_odds.py --sport nhl collect-poly    # after games: Polymarket prices and results
+.venv/bin/python live_odds.py --sport ncaaf collect-scores  # after games: ESPN final scores
+.venv/bin/python analyze_live.py counts                   # usable games so far; `report` once collection closes
 .venv/bin/python tennis_jev.py report                     # any finished experiment re-reports from runs/
+.venv/bin/python -m unittest discover tests               # statistics and the live analyses on synthetic data
 ```
 
 No Polymarket account is needed: its Gamma and CLOB APIs are public. Results in `runs/` are regenerable and gitignored.
@@ -70,14 +84,16 @@ The Odds API free tier has no historical odds, so the Pinnacle comparison is col
 - **Market data:**
   - `markets.py` / `history.py`: long-range markets;
   - `braves.py`, `tennis.py collect`: resolved games with pre-match prices;
-  - `live_odds.py`: live Pinnacle collection.
+  - `live_odds.py`: live Pinnacle collection;
+  - `ladders.py`: Kalshi and Polymarket spread and total ladders turned into one line each.
 - **Experiments**, one module each:
   - `run.py` / `analyze.py`: experiments 1 and 4;
   - `braves_iter.py`: experiment 5;
   - `braves_opt.py`: experiment 6, the 220-config search;
   - `tennis_jev.py`: experiment 7;
   - `sports_jev.py`: experiment 8;
-  - `live_odds.py`: experiments 9 and 10.
+  - `live_odds.py`: experiments 9, 10, 12 and 13 (collection);
+  - `analyze_live.py`, `analyze_spreads.py`: their analyses, committed before collection closes.
 - **Method:**
   - every Jev request is fresh and stateless (no cache, no session);
   - pick cut-offs are fitted on held-out time blocks;
@@ -90,7 +106,7 @@ The Odds API free tier has no historical odds, so the Pinnacle comparison is col
   sharp book, and across a knowledge cutoff.
 - **Prompt design for structured-output models.** Question type mattered only when the model had little to go on. An
   instruction about information the model can't see (e.g. "consider home field") made its ordering worse, not better.
-- **Reading prediction markets.** Experiments 9 and 10 measure how much of a sports market's price is its own crowd
+- **Reading prediction markets.** Experiments 9, 10 and 12 measure how much of a sports market's price is its own crowd
   and how much is a relayed bookmaker line.
 
 ## Research directions
@@ -108,11 +124,12 @@ crowd-calibration/
   jev.py  openjev_arm.py  vendor/            model transports
   markets.py  history.py  braves.py  braves_season.py  tennis.py  games.py  resolve.py   data
   run.py  analyze.py  analyze_history.py  analyze_games.py  questions.py  game_questions.py  culture.py
-  braves_iter.py  braves_opt.py  tennis_jev.py  sports_jev.py  live_odds.py               experiments
+  braves_iter.py  braves_opt.py  tennis_jev.py  sports_jev.py  live_odds.py  ladders.py   experiments
+  analyze_live.py  analyze_spreads.py                                                      live analyses
   docs/PREDICTIONS-*.md   pre-registrations (committed before each run)
   docs/ADC.md             architecture decisions
   tests/FINDINGS.md       the empirical record, including failed predictions and corrections
-  tests/test_stats.py
+  tests/test_stats.py  tests/test_analyze_live.py  tests/test_analyze_spreads.py
 ```
 
 ## Literature
