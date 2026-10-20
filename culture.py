@@ -160,7 +160,7 @@ def resolve() -> None:
 
 
 def compare() -> None:
-    rows = []
+    rows, picks = [], []
     for snap_path in sorted(p for p in (ROOT / "runs").glob("culture-2*.json") if not p.stem.endswith("resolved")):
         snap = json.loads(snap_path.read_text())
         runs = [json.loads(Path(f).read_text())["answers"] for f in sorted(glob.glob(str(ROOT / "runs" / f"jev-culture-{snap['stamp']}-run*.json")))]
@@ -177,6 +177,8 @@ def compare() -> None:
                 cp = max(e["options"], key=lambda o: crowd[o["market_id"]])
                 jp = max(e["options"], key=lambda o: jev[o["market_id"]])
                 win = next((o["option"] for o in e["options"] if res.get(o["market_id"]) == 1), None)
+                if win:
+                    picks.append((cp["option"] == win, jp["option"] == win))
                 print(f"   crowd pick: {cp['option'][:30]} ({crowd[cp['market_id']]:.0%})   Jev pick: {jp['option'][:30]} "
                       f"({jev[jp['market_id']]:.0%})   {'agree' if cp is jp else 'DISAGREE'}" + (f"   -> {win}" if win else ""))
             else:
@@ -185,18 +187,41 @@ def compare() -> None:
             for rank, o in enumerate(ranked):
                 mid = o["market_id"]
                 out = res.get(mid)
-                rows.append((crowd[mid], jev[mid], out))             # every scorable option is scored
+                rows.append((crowd[mid], jev[mid], out, e["id"]))    # every scorable option is scored
                 if rank < 12:                                       # only the top 12 are printed
                     flag = "" if (crowd[mid] >= 0.5) == (jev[mid] >= 0.5) else "  <- split"
                     print(f"     {o['option'][:34]:34} crowd {crowd[mid]:4.0%}  Jev {jev[mid]:4.0%}"
                           + (f"  outcome {'YES' if out else 'no'}" if out is not None else "") + flag)
-    scored = [(c, j, y) for c, j, y in rows if y is not None]
-    agree = sum((c >= 0.5) == (j >= 0.5) for c, j, _ in rows)
-    print(f"\n{len(rows)} options: Jev and the crowd on the same side of 50% on {agree}; {len(scored)} resolved")
-    if scored:
-        bc = statistics.mean((c - y) ** 2 for c, _, y in scored)
-        bj = statistics.mean((j - y) ** 2 for _, j, y in scored)
-        print(f"Brier per option (lower is better): crowd {bc:.3f}  Jev {bj:.3f}  coin flip 0.250")
+    scored = [(c, j, y, ev) for c, j, y, ev in rows if y is not None]
+    agree = sum((c >= 0.5) == (j >= 0.5) for c, j, _, _ in rows)
+    print(f"\n{len(rows)} options: Jev and the crowd on the same side of 50% on {agree} ({agree / len(rows):.0%}, K3: >= 70%); "
+          f"{len(scored)} resolved")
+    if not scored:
+        return
+    import random
+    rng = random.Random(7)
+    events = sorted({ev for *_, ev in scored})
+
+    def gap(sub):                                     # Brier(Jev) - Brier(crowd); options in one event move together,
+        return statistics.mean((j - y) ** 2 - (c - y) ** 2 for c, j, y, _ in sub)   # so the CI resamples events
+    def ci(sub):
+        evs = sorted({ev for *_, ev in sub})
+        by = {ev: [r for r in sub if r[3] == ev] for ev in evs}
+        out = sorted(gap([r for _ in evs for r in by[rng.choice(evs)]]) for _ in range(2000))
+        return out[50], out[1949]
+    bc = statistics.mean((c - y) ** 2 for c, _, y, _ in scored)
+    bj = statistics.mean((j - y) ** 2 for _, j, y, _ in scored)
+    lo, hi = ci(scored)
+    print(f"Brier per option (lower is better): crowd {bc:.3f}  Jev {bj:.3f}  coin flip 0.250 | "
+          f"Jev - crowd {bj - bc:+.3f} [{lo:+.3f}, {hi:+.3f}] over {len(events)} events (K1)")
+    mid = [r for r in scored if 0.35 <= r[0] <= 0.65]
+    if mid:
+        lo, hi = ci(mid)
+        print(f"crowd 35-65%: {len(mid)} options in {len({r[3] for r in mid})} events; Brier crowd "
+              f"{statistics.mean((c - y) ** 2 for c, _, y, _ in mid):.3f}  Jev {statistics.mean((j - y) ** 2 for _, j, y, _ in mid):.3f}"
+              f"  Jev - crowd {gap(mid):+.3f} [{lo:+.3f}, {hi:+.3f}] (K2: within +-0.03; counts only below 40)")
+    if picks:
+        print(f"exclusive events resolved: {len(picks)}; crowd's top pick won {sum(c for c, _ in picks)}, Jev's {sum(j for _, j in picks)}")
 
 
 if __name__ == "__main__":

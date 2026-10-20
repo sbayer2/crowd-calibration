@@ -585,3 +585,72 @@ experiment 7 tennis sample: the same 1,250 matches, state, five question types a
 - One sport and one sample.
 - Nimble's base, Qwen3.5-9B, has a training cutoff not stated on its page. If it is later than Jev's, Nimble's tie on
   tour-level players could partly reflect more recent knowledge offsetting a smaller model.
+
+## G-001 — Experiment 2: tonight's games — counts only (n = 27); Jev near a coin flip, the market barely better
+
+**Scored 2026-10-20** (`analyze_games.py`), after pre-registration (`docs/PREDICTIONS-GAMES.md`, commit 81c0742). The
+written-up numbers are the same as when the games resolved in early October; this entry was overdue.
+
+**Sample.** 45 games were frozen on 4 days (09-30 to 10-05), not the planned 7 daily freezes. 27 resolved with answers
+from every arm. The plan's rule applies: below 80 games, counts are reported, not verdicts.
+
+**Result.**
+
+| Forecaster | Brier [95% CI] | Log loss |
+|---|---|---|
+| Market | 0.249 [0.212, 0.285] | 0.689 |
+| Coin flip | 0.250 | 0.693 |
+| Jev, both sides (primary) | 0.264 [0.242, 0.287] | 0.722 |
+| Jev, bins | 0.260 [0.243, 0.279] | 0.714 |
+| openjev, both sides | 0.289 [0.222, 0.356] | 0.781 |
+
+- Brier(Jev) − Brier(market): +0.016 [−0.016, +0.047].
+- Agreement with the price: Jev Spearman +0.61; openjev +0.22.
+- Jev's framing gap, mean |P(A) − (1 − P(B))|: 0.090. openjev's: 0.515.
+- Jev's spread against its absolute error: Spearman +0.36.
+- Winners picked: Jev 12 of 26, the market 12 of 27.
+- Screener (amendment of 09-30): 7 confident flags (4 won, profit +0.17 per $1 [−0.22, +0.46]) and 4 unsure (1 won).
+  Fewer than 20 per group, so counts only.
+
+**Against the predictions (descriptive, n < 80).**
+- **G1 (ρ between 0.2 and 0.5):** Jev's ρ is +0.61, above the band. Experiments 7-8 later found the same level (about
+  +0.6) on larger samples.
+- **G2 (Jev's Brier CI includes 0.25):** consistent.
+- **G3 (the market beats Jev):** the point estimate favours the market by 0.016; the CI includes 0.
+- **G4 (the "ether" test):** Jev's Brier CI does not lie below 0.25. No sign of outcome knowledge without current
+  information.
+- **G5 (framing gap ≥ 0.05):** consistent, at 0.090.
+- **G6 (no prediction):** Jev's spread tracks its error (+0.36), as in C-001.
+
+**Reading.** On 27 near-even games no forecaster separated from a coin flip, the market included. The experiment was
+underpowered by design (see its power section) and fell further short when the daily freezes stopped. Its questions
+were taken up by larger samples: experiments 5-8 (resolved history) and 9-12 (live).
+
+## K-001 — Experiment 3: pop culture from the question alone — the crowd beats Jev easily (K1, K3 held; K2 counts only)
+
+**Scored 2026-10-20** (`culture.py resolve` and `compare`), after pre-registration (`docs/PREDICTIONS-CULTURE.md`,
+commit 4d91802). The outcomes were fetched on 10-20, about two weeks after the markets closed (10-03 to 10-07).
+
+**Sample.** One freeze on 10-01: 20 events and 210 options. 174 options are scorable after the placeholder exclusion
+(amendment of 10-01), and 172 have resolved: 19 events.
+
+**Result.**
+- **Brier per option:** crowd 0.071, Jev 0.190, coin flip 0.250. Jev − crowd: +0.119 [+0.072, +0.166].
+  - The CI resamples whole events, because the options of one event resolve together. This choice was made at scoring
+    time; the plan names no CI.
+- **Same side of 50%:** 128 of 174 options (74%).
+- **Exclusive events, 12 resolved:** the crowd's top pick won 11, Jev's 3.
+- **Crowd unsure (35-65%):** 19 options in 7 events. Brier crowd 0.244, Jev 0.421; Jev − crowd +0.177 [+0.101,
+  +0.284].
+
+**Predictions.**
+- **K1 held.** The crowd beats Jev on Brier by a wide margin, with the event-clustered CI excluding 0.
+- **K2: counts only** (n = 19 < 40). The data run against it: where the crowd is unsure, Jev is worse, not level.
+  - On "what will be said" markets, the crowd is near certain on stock words (a Big Brother episode's "Final" at 99%;
+    the All-In podcast's "Google" at 96%). Jev, seeing only the word, stays near 30%.
+- **K3 held,** at 74% against a 70% threshold, mostly because both reject long shots.
+
+**Reading.** Without the description, dates or prices, Jev cannot read what the crowd reads (box office tracking,
+episode formats, a podcast's habits). Its Brier beats the coin flip only because it rejects long shots, and it picks the
+winner of 3 of 12 exclusive events against the crowd's 11. This is the clearest case in the repository of the crowd
+holding information the model lacks.
