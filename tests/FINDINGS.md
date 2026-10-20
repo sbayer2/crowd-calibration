@@ -636,15 +636,20 @@ commit 4d91802). The outcomes were fetched on 10-20, about two weeks after the m
 
 **Result.**
 - **Brier per option:** crowd 0.071, Jev 0.190, coin flip 0.250. Jev − crowd: +0.119 [+0.072, +0.166].
-  - The CI resamples whole events, because the options of one event resolve together. This choice was made at scoring
-    time; the plan names no CI.
+  - The plan names no CI. At scoring time, after the point estimates were seen, the CI was chosen to resample whole
+    events (2000 resamples, seed 7), because the options of one event resolve together.
+  - For comparison, resampling single options gives [+0.080, +0.158]. Both exclude 0, so K1 does not depend on the
+    choice.
 - **Same side of 50%:** 128 of 174 options (74%).
 - **Exclusive events, 12 resolved:** the crowd's top pick won 11, Jev's 3.
-- **Crowd unsure (35-65%):** 19 options in 7 events. Brier crowd 0.244, Jev 0.421; Jev − crowd +0.177 [+0.101,
-  +0.284].
+- **Crowd unsure (35-65%):** 19 options in 7 events. Brier crowd 0.244, Jev 0.421; Jev − crowd +0.177 [+0.098,
+  +0.283] by event, [+0.092, +0.262] by option.
+  - The event-clustered interval first reported (commit 7801709) was [+0.101, +0.284]. It moved because the option
+    bootstrap now runs first from the same seeded generator.
 
 **Predictions.**
-- **K1 held.** The crowd beats Jev on Brier by a wide margin, with the event-clustered CI excluding 0.
+- **K1 held.** The crowd beats Jev on Brier by a wide margin; the CI excludes 0 whether events or options are
+  resampled.
 - **K2: counts only** (n = 19 < 40). The data run against it: where the crowd is unsure, Jev is worse, not level.
   - On "what will be said" markets, the crowd is near certain on stock words (a Big Brother episode's "Final" at 99%;
     the All-In podcast's "Google" at 96%). Jev, seeing only the word, stays near 30%.

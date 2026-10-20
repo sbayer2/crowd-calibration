@@ -209,17 +209,24 @@ def compare() -> None:
         by = {ev: [r for r in sub if r[3] == ev] for ev in evs}
         out = sorted(gap([r for _ in evs for r in by[rng.choice(evs)]]) for _ in range(2000))
         return out[50], out[1949]
+    def ci_options(sub):                              # unclustered, for comparison: resamples options
+        out = sorted(gap([rng.choice(sub) for _ in sub]) for _ in range(2000))
+        return out[50], out[1949]
     bc = statistics.mean((c - y) ** 2 for c, _, y, _ in scored)
     bj = statistics.mean((j - y) ** 2 for _, j, y, _ in scored)
     lo, hi = ci(scored)
+    olo, ohi = ci_options(scored)
     print(f"Brier per option (lower is better): crowd {bc:.3f}  Jev {bj:.3f}  coin flip 0.250 | "
-          f"Jev - crowd {bj - bc:+.3f} [{lo:+.3f}, {hi:+.3f}] over {len(events)} events (K1)")
+          f"Jev - crowd {bj - bc:+.3f} [{lo:+.3f}, {hi:+.3f}] over {len(events)} events (K1); "
+          f"resampling options [{olo:+.3f}, {ohi:+.3f}]")
     mid = [r for r in scored if 0.35 <= r[0] <= 0.65]
     if mid:
         lo, hi = ci(mid)
+        olo, ohi = ci_options(mid)
         print(f"crowd 35-65%: {len(mid)} options in {len({r[3] for r in mid})} events; Brier crowd "
               f"{statistics.mean((c - y) ** 2 for c, _, y, _ in mid):.3f}  Jev {statistics.mean((j - y) ** 2 for _, j, y, _ in mid):.3f}"
-              f"  Jev - crowd {gap(mid):+.3f} [{lo:+.3f}, {hi:+.3f}] (K2: within +-0.03; counts only below 40)")
+              f"  Jev - crowd {gap(mid):+.3f} [{lo:+.3f}, {hi:+.3f}]; resampling options [{olo:+.3f}, {ohi:+.3f}] "
+              f"(K2: within +-0.03; counts only below 40)")
     if picks:
         print(f"exclusive events resolved: {len(picks)}; crowd's top pick won {sum(c for c, _ in picks)}, Jev's {sum(j for _, j in picks)}")
 
