@@ -125,3 +125,13 @@ included. Neutral-site games are flagged, not dropped, as before.
 
 **Operations.** The LaunchAgent stays loaded (see the 10-18 10:30 amendment). The Mac must be awake on each Saturday
 from about 10:00 CDT until the last T−5.
+
+## Amendment 2026-10-20, 10:30 CDT (analysis code; written before any measure was computed)
+- Scored by `analyze_live.py`; see the same-dated amendment in `docs/PREDICTIONS-NHL.md`. Neutral sites come from
+  ESPN (`collect-scores`) and are flagged in the rows.
+- **Georgia @ Alabama (10-10)** moved its kickoff from 23:30 to 23:37, then 23:49 UTC. The last pre-game snapshot was
+  0.8 minutes before the final start, outside the 1-12 minute T−5 window, so the game is dropped, as LSU @ Kentucky
+  was. The earlier count of 24 usable games used a looser 0-13 minute check and counted it.
+- **Count on 10-20:** 23 usable games; dropped: 10 without a Pinnacle T−5 (the five 11:00 kickoffs of 10-10 not
+  collected, Stanford @ Notre Dame and Maryland @ Ohio State never priced, Boise State @ Fresno State not priced at
+  T−5, LSU @ Kentucky, Georgia @ Alabama).

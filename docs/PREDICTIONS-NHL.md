@@ -114,3 +114,23 @@ match, a Polymarket price within 10 minutes before the T−5 snapshot time, or a
   last call, which could be hours old. The floor (25) and the daily cap (24) are unchanged.
 - Until 11-06, the NCAA football arm also leaves 12 credits a day for this arm and the other arm. See the same-dated
   amendment in `docs/PREDICTIONS-NCAAF.md`.
+
+## Amendment 2026-10-20, 10:30 CDT (analysis code and missed windows; written before any measure was computed)
+- **Analysis code:** `analyze_live.py` scores experiments 9, 10 and 12 together, tested on synthetic data
+  (`tests/test_analyze_live.py`). Until collection closes it is run on real data only as `counts` (usable games and
+  drop reasons); the measures run once, at the end (ADC-013). The choices this plan leaves open are fixed in the
+  script's docstring. The main ones:
+  - The start is the last listing taken before that start; the Odds API overwrites a live game's start with the actual
+    puck drop.
+  - T−5 is the latest Pinnacle-priced snapshot 1-12 minutes before; T−60 the one 45-70 minutes before that is closest
+    to 60; early the latest early snapshot.
+  - Both Jev configs are scored, each with its own verdict.
+  - Bootstrap: 2000 resamples, seed 7.
+  - C3 counts the share of the T−60 gap closed.
+- **Missed windows not recorded before** (from the logs; counts only):
+  - 10-07 evening: Colorado @ Winnipeg and Pittsburgh @ Washington have no T−5 snapshot (the hotspot DNS failures
+    of that day).
+  - 10-13, about 20:30-22:15 CDT: every odds call failed on a network outage, so Calgary @ Anaheim, Edmonton @ Los
+    Angeles and Boston @ San Jose have no T−5.
+- **Count on 10-20:** 89 usable NHL games; dropped: 7 without a Pinnacle T−5 (the four lost to the 10-13 cap and the
+  five above; two of those had other gaps) and 1 without a Polymarket price within 10 minutes of T−5.

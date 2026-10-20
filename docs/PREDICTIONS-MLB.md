@@ -93,3 +93,10 @@ collected tonight as `bf41baae`.
   candidate was found, so no hand match was needed.
 - **Effect.** MLB matches go from 14 to 15 of 18 listings. The three unmatched are the two known duplicate listings
   and the postponed Game 4 listing (`b9d2e07c`). NHL and NCAA football do not use this scan.
+
+## Amendment 2026-10-20, 10:30 CDT (analysis code and missed windows; written before any measure was computed)
+- Scored by `analyze_live.py`; see the same-dated amendment in `docs/PREDICTIONS-NHL.md`.
+- **Missed windows not recorded before:** Rays @ Yankees (10-07, 19:08 CDT) has no T−5, and Dodgers @ Brewers (10-12)
+  has no pre-game snapshot. The two duplicate listings (Guardians @ White Sox 10-08, Rays @ Guardians 10-15) never got
+  a T−5 and are dropped under that rule.
+- **Count on 10-20:** 13 usable games; dropped: 5 without a Pinnacle T−5 and 1 postponed listing.
