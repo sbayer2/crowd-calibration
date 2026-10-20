@@ -123,7 +123,7 @@ home advantage by construction.
 
 ---
 
-## ADC-013 — Live analysis code is written before collection closes and tested on synthetic data — OPEN
+## ADC-013 — Live analysis code is written before collection closes and tested on synthetic data — DONE
 
 **Context.** Experiments 9, 10, 12 and 13 have collectors but no analysis code. Running analysis code on partial real
 data would show results before the plan's end point.
@@ -132,5 +132,8 @@ data would show results before the plan's end point.
 look only at counts (usable games, drop reasons) until collection closes. Commit each script before its first real
 run.
 
-**Consequences.** Any bug found at the real run is fixed in a new commit and reported. Close this entry when every
-script is committed.
+**Consequences.** Any bug found at the real run is fixed in a new commit and reported.
+
+**Closed 2026-10-20.** `analyze_live.py` (experiments 9, 10, 12) and `analyze_spreads.py` (experiment 13) are committed,
+with synthetic tests in `tests/`. The first real count found that the Odds API rewrites a live game's start time, so
+windows are timed against the last pre-game listing; it also surfaced missed windows now recorded in the plans.

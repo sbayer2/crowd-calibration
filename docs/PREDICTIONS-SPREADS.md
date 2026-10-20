@@ -154,3 +154,14 @@ Sign convention: **margin = away score − home score.** A Pinnacle line of home
 - **Offline check on 10-18** (free sources only; nothing stored): for 17 ranked games listed for 10-24, Kalshi gave
   15 usable spread and 15 total lines and Polymarket 16 and 11. Where both had a line they agreed within about 0.5
   points.
+
+## Amendment 2026-10-20, 11:00 CDT (analysis code; written before the first snapshot)
+- `analyze_spreads.py` scores every measure in this plan. It was tested on synthetic data (`tests/test_analyze_spreads.py`)
+  and is run on real data only as `counts` until the 12-05 games are final (ADC-013).
+- Choices the plan leaves open, fixed in the script's docstring:
+  - S3 holds when the MAE difference is within ±0.5 and its CI includes 0. S4 holds when Jev's MAE is worse by at least
+    1.5 and the CI excludes 0. J6 holds when r ≤ 0.40 and the CI of r(J5) − r(J6) is above 0.
+  - J8 leaves out pushes and uses a 95% Wilson interval.
+  - Every Jev measure is reported for the median (primary) and the expected value (secondary).
+  - The home term is fitted on non-neutral games in 5 folds by start order.
+  - The games found in only one of experiments 12 and 13 are listed by the report.
