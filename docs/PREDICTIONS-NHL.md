@@ -132,5 +132,6 @@ match, a Polymarket price within 10 minutes before the T−5 snapshot time, or a
     of that day).
   - 10-13, about 20:30-22:15 CDT: every odds call failed on a network outage, so Calgary @ Anaheim, Edmonton @ Los
     Angeles and Boston @ San Jose have no T−5.
-- **Count on 10-20:** 89 usable NHL games; dropped: 7 without a Pinnacle T−5 (the four lost to the 10-13 cap and the
-  five above; two of those had other gaps) and 1 without a Polymarket price within 10 minutes of T−5.
+- **Count on 10-20:** 89 usable NHL games; dropped: 7 without a Pinnacle T−5 (the two T−5s lost to the 10-13 cap,
+  already recorded, and the five above) and 1 without a Polymarket price within 10 minutes of T−5 (Florida @ Los
+  Angeles, 10-07).
