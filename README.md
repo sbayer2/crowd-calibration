@@ -8,7 +8,7 @@ answers with the market and with what actually happened. Every experiment is pre
 before any data), run on fresh, independent Jev calls, and recorded in `tests/FINDINGS.md`, including the predictions
 that failed.
 
-## Now running: is Polymarket's sports price the crowd or the bookmaker? (experiments 9, 10, 12 and 13)
+## Now running: is Polymarket's sports price the crowd or the bookmaker? (experiments 9, 10, 12, 13 and 14)
 
 Polymarket pays market makers to quote near its price, and practitioners say sports quotes are copied from sharp
 sportsbooks such as Pinnacle. If so, the "wisdom of the crowd" Jev was being compared with may be largely a
@@ -31,6 +31,10 @@ bookmaker's line. A **live collector** records three forecasters for every game,
   snapshot reads Pinnacle's lines, the Kalshi and Polymarket ladders (each turned into one line), and blind Jev's
   margin and total. Do the exchanges price the line like the book, and how much of a spread can a model with no
   current information reproduce? ([pre-registration](docs/PREDICTIONS-SPREADS.md))
+- **Experiment 14:** every NBA game from 10-22 to 12-05, moneylines only, from free sources: Polymarket and Kalshi
+  (1-minute histories fetched after the games), blind Jev before tip-off, ESPN results. No sportsbook and no Odds API
+  credits. Do the two exchanges agree, and does Jev track the closing crowd less in the NBA than in college football?
+  ([pre-registration](docs/PREDICTIONS-NBA.md))
 
 Pre-registered tests:
 - **Crowd or book.**
@@ -41,6 +45,8 @@ Pre-registered tests:
   - **J1:** does Jev side with the crowd or the book where they differ?
   - **J2:** is Jev closer to the early line (mostly a strength rating) than to the close (which adds game-day news)?
   - **J3, J4:** Jev trails both sources, and tracks the book more in college football, where strength gaps are wide.
+- **Across sports (experiment 14).** E1-E2: do Polymarket and Kalshi agree, and does either add to the other? X6: is
+  Jev's agreement with the closing crowd lower in the NBA than in college football?
 
 Agreement alone cannot separate copying from two good forecasters reaching the same answer, so C2 and C3 are the
 decisive tests.
@@ -71,7 +77,10 @@ printf 'AI_GATEWAY_API_KEY=...\nODDS_API_KEY=...\n' > .env        # Vercel AI Ga
 .venv/bin/python live_odds.py --sport nhl status
 .venv/bin/python live_odds.py --sport nhl collect-poly    # after games: Polymarket prices and results
 .venv/bin/python live_odds.py --sport ncaaf collect-scores  # after games: ESPN final scores
+.venv/bin/python nba_free.py tick                         # NBA: schedule, Jev, and an hourly collect (no Odds API)
+.venv/bin/python nba_free.py status
 .venv/bin/python analyze_live.py counts                   # usable games so far; `report` once collection closes
+.venv/bin/python analyze_nba.py counts
 .venv/bin/python tennis_jev.py report                     # any finished experiment re-reports from runs/
 .venv/bin/python -m unittest discover tests               # statistics and the live analyses on synthetic data
 ```
@@ -86,6 +95,7 @@ The Odds API free tier has no historical odds, so the Pinnacle comparison is col
   - `markets.py` / `history.py`: long-range markets;
   - `braves.py`, `tennis.py collect`: resolved games with pre-match prices;
   - `live_odds.py`: live Pinnacle collection;
+  - `nba_free.py`: NBA schedule and results (ESPN), Polymarket and Kalshi histories, all free;
   - `ladders.py`: Kalshi and Polymarket spread and total ladders turned into one line each.
 - **Experiments**, one module each:
   - `run.py` / `analyze.py`: experiments 1 and 4;
@@ -93,8 +103,8 @@ The Odds API free tier has no historical odds, so the Pinnacle comparison is col
   - `braves_opt.py`: experiment 6, the 220-config search;
   - `tennis_jev.py`: experiment 7;
   - `sports_jev.py`: experiment 8;
-  - `live_odds.py`: experiments 9, 10, 12 and 13 (collection);
-  - `analyze_live.py`, `analyze_spreads.py`: their analyses, committed before collection closes.
+  - `live_odds.py`: experiments 9, 10, 12 and 13 (collection); `nba_free.py`: experiment 14;
+  - `analyze_live.py`, `analyze_spreads.py`, `analyze_nba.py`: their analyses, committed before collection closes.
 - **Method:**
   - every Jev request is fresh and stateless (no cache, no session);
   - pick cut-offs are fitted on held-out time blocks;
@@ -125,12 +135,13 @@ crowd-calibration/
   jev.py  openjev_arm.py  vendor/            model transports
   markets.py  history.py  braves.py  braves_season.py  tennis.py  games.py  resolve.py   data
   run.py  analyze.py  analyze_history.py  analyze_games.py  questions.py  game_questions.py  culture.py
-  braves_iter.py  braves_opt.py  tennis_jev.py  sports_jev.py  live_odds.py  ladders.py   experiments
-  analyze_live.py  analyze_spreads.py                                                      live analyses
+  braves_iter.py  braves_opt.py  tennis_jev.py  sports_jev.py  live_odds.py  ladders.py  nba_free.py   experiments
+  analyze_live.py  analyze_spreads.py  analyze_nba.py                                                    live analyses
   docs/PREDICTIONS-*.md   pre-registrations (committed before each run)
   docs/ADC.md             architecture decisions
   tests/FINDINGS.md       the empirical record, including failed predictions and corrections
-  tests/test_stats.py  tests/test_analyze_live.py  tests/test_analyze_spreads.py
+  tests/test_stats.py  tests/test_analyze_live.py  tests/test_analyze_spreads.py  tests/test_analyze_nba.py
+  tests/test_nba_free.py
 ```
 
 ## Literature

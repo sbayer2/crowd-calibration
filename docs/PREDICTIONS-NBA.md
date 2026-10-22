@@ -101,3 +101,18 @@ Verdicts need at least 100 usable games (as in experiment 12); below that, count
 - A fourth LaunchAgent, `com.sbayer2.crowd-calibration.nba`, every 2 minutes. It never calls the Odds API.
 - Analysis in `analyze_live.py` or a sibling script, tested on synthetic data, run on real data only as counts until
   12-05 (ADC-013).
+
+## Amendment 2026-10-22, 10:15 CDT (implementation; written before any NBA price was read for analysis)
+- **Start of the sample: 2026-10-22.** The LaunchAgent first ran at 10:02 CDT and asked Jev about that night's two
+  games (Cleveland @ Philadelphia, Denver @ Oklahoma City) well before tip-off, so they are included.
+- **Collector:** `nba_free.py`. Its tick refreshes the ESPN schedule hourly (Central today and tomorrow); a start moves
+  only on a listing read before it. Jev is asked from 14:00 UTC for games starting within 20 hours and more than 5
+  minutes away. The tick also runs `collect` hourly for games that started 3.5 hours to 3 days ago.
+- **Kalshi:** matched by both team names and the date in the market rules (one day either side of the Central date).
+  Kalshi lists cities; "Los Angeles C" and "Los Angeles L" map to the Clippers and the Lakers. Candles are fetched for
+  both teams' markets from 13:45 UTC on the game day to the start. Kalshi omits minutes without activity; the 10-minute
+  rule covers the gaps (the longest in a 13-hour test on 10-21 was 7 minutes).
+- **Live check (10-21, scratch directory, Jev not called):** all 11 games matched in ESPN, Polymarket and Kalshi, and
+  every result agreed with the final score.
+- **Analysis:** `analyze_nba.py`, tested on synthetic data (`tests/test_analyze_nba.py`). The choices this plan leaves
+  open are fixed in its docstring. On real data it is run only as `counts` until the 12-05 games are final (ADC-013).

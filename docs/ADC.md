@@ -171,3 +171,19 @@ power.
 
 **Open.** Whether to extend collection past 11-05 is the user's decision. Any extension must be written as a plan
 amendment before any measure is computed. Credits are the limit: the NCAA football arm holds credits in reserve for the NHL arm only until 11-06 (ADC-007).
+
+---
+
+## ADC-016 — A fourth sport from free sources only: NBA moneylines — DONE
+
+**Context.** The user asked to add NBA moneylines (2026-10-22). A Pinnacle arm like the NHL one would cost about 10
+credits a night, and the free key's remaining credits are committed to experiments 9, 10, 12 and 13 (ADC-007, ADC-015).
+
+**Decision.** The user chose free sources only. ESPN gives the schedule and results; Polymarket and Kalshi give
+1-minute price histories after the games; blind Jev is asked before tip-off. A separate module (`nba_free.py`) and a
+fourth LaunchAgent (`com.sbayer2.crowd-calibration.nba`), which never calls the Odds API. Plan:
+`docs/PREDICTIONS-NBA.md`.
+
+**Consequences.** No sportsbook, so no crowd-or-book test for the NBA. In exchange, the exchange-vs-exchange tests (E1,
+E2) and a cross-sport test of Jev (X6) cost nothing. Because prices are read after the games, only Jev's answer
+depends on the Mac being awake. Analysis: `analyze_nba.py`, run on real data only as counts until 12-05.
