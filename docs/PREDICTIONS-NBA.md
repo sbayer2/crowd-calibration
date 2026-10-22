@@ -1,6 +1,6 @@
 # Pre-registered plan — experiment 14: NBA moneylines from free sources — two exchanges and blind Jev
 
-Written 2026-10-22 and approved by the user at about 9:40 CDT, before any NBA price or Jev answer was collected. No Odds
+Written 2026-10-22 and approved by the user at about 9:58 CDT, before any NBA price or Jev answer was collected. No Odds
 API credits are used.
 
 ## Why
@@ -102,7 +102,7 @@ Verdicts need at least 100 usable games (as in experiment 12); below that, count
 - Analysis in `analyze_live.py` or a sibling script, tested on synthetic data, run on real data only as counts until
   12-05 (ADC-013).
 
-## Amendment 2026-10-22, 10:15 CDT (implementation; written before any NBA price was read for analysis)
+## Amendment 2026-10-22, 10:05 CDT (implementation; written before any NBA price was read for analysis)
 - **Start of the sample: 2026-10-22.** The LaunchAgent first ran at 10:02 CDT and asked Jev about that night's two
   games (Cleveland @ Philadelphia, Denver @ Oklahoma City) well before tip-off, so they are included.
 - **Collector:** `nba_free.py`. Its tick refreshes the ESPN schedule hourly (Central today and tomorrow); a start moves
