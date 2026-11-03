@@ -187,3 +187,18 @@ fourth LaunchAgent (`com.sbayer2.crowd-calibration.nba`), which never calls the 
 **Consequences.** No sportsbook, so no crowd-or-book test for the NBA. In exchange, the exchange-vs-exchange tests (E1,
 E2) and a cross-sport test of Jev (X6) cost nothing. Because prices are read after the games, only Jev's answer
 depends on the Mac being awake. Analysis: `analyze_nba.py`, run on real data only as counts until 12-05.
+
+---
+
+## ADC-017 — The MLB report is run alone, before the other sports close — DONE
+
+**Context.** MLB collection ended with the World Series (10-29). `analyze_live.py report` has no per-sport option and
+computes every sport it finds, which ADC-013 forbids for NHL (closes 11-05) and NCAA football (closes 12-05).
+
+**Decision.** Run the report once with `--root` pointing at a tree that contains only a link to `runs/mlb` (user's
+request, 2026-11-03). The script is unchanged. Its MLB-only counts matched the real tree (18 usable, 6 dropped) before
+the report ran.
+
+**Consequences.** No NHL or NCAA football measure was computed; the pooled C2 and J1 (ADC-011) still run at NHL's close
+with the same code. Results: M-001 in `tests/FINDINGS.md`. The drop review also identified the cause of the Rays @
+Yankees miss (10-07), not recorded before: the MLB collector ran no ticks from 5:52 to 7:34 PM CDT.

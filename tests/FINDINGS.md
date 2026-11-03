@@ -659,3 +659,56 @@ commit 4d91802). The outcomes were fetched on 10-20, about two weeks after the m
 episode formats, a podcast's habits). Its Brier beats the coin flip only because it rejects long shots, and it picks the
 winner of 3 of 12 exclusive events against the crowd's 11. This is the clearest case in the repository of the crowd
 holding information the model lacks.
+
+## M-001 — Experiment 10: MLB postseason, descriptive (n = 18); the two prices agree, Jev near a coin flip
+
+**Scored 2026-11-03** (`analyze_live.py report`, once), after pre-registration (`docs/PREDICTIONS-MLB.md`). The plan
+makes the MLB report descriptive: CIs, no verdicts. The `holds` flags the script prints are not verdicts here. NHL and
+NCAA football were still collecting, so the report was run on a data tree holding only `runs/mlb` (ADC-017); no NHL or
+NCAA football measure was computed. Output: `runs/live-analysis/mlb/report.json` (git-ignored, regenerable).
+
+**Sample.** 24 listings from 10-07 to the last World Series game (10-29); 18 usable. The plan expected about 30-45
+games. Collection began on 10-07, so earlier postseason games were never listed; they are not drops.
+
+| Listing | Dropped as | Cause |
+|---|---|---|
+| Guardians @ White Sox, 10-07 3:00 PM CDT | no Pinnacle T−5 | No tick completed in the window (5-minute ticks, failing hotspot DNS). Led to 2-minute ticks and heartbeats (amendment 10-07). |
+| Rays @ Yankees, 10-07 7:08 PM | no Pinnacle T−5 | The MLB collector logged no heartbeat from 5:52 to 7:34 PM CDT, covering both the T−60 and the T−5 window. |
+| Guardians @ White Sox, 10-08 4:00 PM | no Pinnacle T−5 | Duplicate listing; not a separate game. |
+| Dodgers @ Brewers, 10-12 4:10 PM | no Pinnacle T−5 | DNS outage: the T−60 and T−5 calls failed on every retry. |
+| Rays @ Guardians, 10-15 5:00 PM | no Pinnacle T−5 | Duplicate listing; not a separate game. |
+| Rays @ Guardians, 10-16 (ALCS Game 4) | postponed | Rained out; the replayed game is usable under its new listing (amendment 10-17). |
+
+Of 21 games actually played in the window, 18 are usable (86%); the 3 lost were collector outages, 2 of them on the
+first day.
+
+**Result** (2000 bootstrap resamples of games, seed 7; Jev answers under both configs).
+
+| Measure | Result [95% CI] |
+|---|---|
+| C1: Polymarket vs Pinnacle at T−5 | Spearman 0.997 [0.969, 1.000]; mean absolute difference 0.004 [0.003, 0.006] |
+| C2: out-of-fold log loss, with − without Polymarket | +0.487 [+0.037, +1.188] |
+| C3: share of the T−60 gap closed | n = 0 (no game with a T−60 gap ≥ 0.03) |
+| J1 noul_both: partial ρ, Jev~Poly given Pin / Jev~Pin given Poly | −0.048 [−0.492, +0.756] / +0.084 [−0.743, +0.551] |
+| J1 bins_plain | −0.151 [−0.601, +0.706] / +0.191 [−0.694, +0.648] |
+| J2 noul_both (n = 16): ρ with early / Pinnacle T−5 / Polymarket T−5 | 0.442 / 0.439 / 0.429; early − Pin5 +0.004 [−0.135, +0.168] |
+| J2 bins_plain (n = 16) | 0.513 / 0.520 / 0.500; early − Pin5 −0.007 [−0.163, +0.151] |
+| J3 AUC: Jev noul_both / bins_plain; Pinnacle; Polymarket | 0.481 / 0.531; 0.688; 0.675 |
+| J3 Jev − Pinnacle AUC | noul_both [−0.486, +0.092]; bins_plain [−0.423, +0.138] |
+
+**Against the predictions (descriptive).**
+- **C1:** consistent. The two prices are nearly identical at T−5.
+- **C2:** the prediction is "Polymarket does not improve on Pinnacle"; the script's test is a CI that includes 0. The
+  CI lies above 0: adding Polymarket made out-of-fold log loss worse. Post-hoc mechanism, not measured: with 18 games
+  and 5 folds, a second regressor correlated 0.997 with the first adds coefficient variance and no information. Read
+  it as "no improvement", not as "Polymarket is worse".
+- **C3:** not measurable.
+- **J1:** the CIs span about ±0.7; nothing can be read from them.
+- **J2:** Jev correlates equally (about 0.44-0.52) with the early line and both closing prices; differences near 0.
+- **J3:** Jev's AUC is below both sources' in point estimate (as predicted) but the CIs of the differences include 0.
+  Both configs sit near 0.5, under the 0.575 S-001 found on regular-season MLB. The plan's postseason note (strong
+  teams compress Jev's prior range) is a candidate reason, not a measured one.
+
+**Reading.** In the 2026 postseason Polymarket and Pinnacle priced games almost identically, and blind Jev was near a
+coin flip. At n = 18 this is a pilot. The pre-registered NHL+MLB pooled test of C2 and J1 (sport fixed effect) runs
+after NHL closes on 11-05, with code fixed since 10-20, so seeing these numbers does not change it.
