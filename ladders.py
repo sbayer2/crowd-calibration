@@ -14,6 +14,7 @@ Sign convention: margin = away score - home score. Every rung becomes P(margin >
 from __future__ import annotations
 
 import datetime as dt
+import gzip
 import json
 import re
 import urllib.request
@@ -36,8 +37,11 @@ TOTAL_MIDS = [30, 38.5, 45.5, 52.5, 59.5, 66.5, 77.5]
 
 
 def get(url: str) -> Any:
-    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "crowd-calibration/0.1"}), timeout=60) as r:
-        return json.load(r)
+    # gzip: since 11-13 Polymarket's /events refuses pages with limit > 50 unless the client accepts gzip (HTTP 406)
+    req = urllib.request.Request(url, headers={"User-Agent": "crowd-calibration/0.1", "Accept-Encoding": "gzip"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        body = r.read()
+        return json.loads(gzip.decompress(body) if r.headers.get("Content-Encoding") == "gzip" else body)
 
 
 def rung(x: float, p_yes: float | None, bid: float | None, ask: float | None, flip: bool, label: str) -> dict[str, Any]:

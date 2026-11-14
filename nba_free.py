@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import gzip
 import json
 import os
 import re
@@ -59,8 +60,11 @@ def iso(t: str) -> dt.datetime:
 
 
 def get(url: str) -> Any:
-    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "crowd-calibration/0.1"}), timeout=60) as r:
-        return json.load(r)
+    # gzip: since 11-13 Polymarket's /events refuses pages with limit > 50 unless the client accepts gzip (HTTP 406)
+    req = urllib.request.Request(url, headers={"User-Agent": "crowd-calibration/0.1", "Accept-Encoding": "gzip"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        body = r.read()
+        return json.loads(gzip.decompress(body) if r.headers.get("Content-Encoding") == "gzip" else body)
 
 
 def load(name: str, default: Any) -> Any:

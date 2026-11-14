@@ -12,6 +12,7 @@ time and the date, and answers one yes/no: "Will the Atlanta Braves win this gam
 from __future__ import annotations
 
 import datetime as dt
+import gzip
 import json
 import statistics
 import time
@@ -30,10 +31,12 @@ HIST = "https://clob.polymarket.com/prices-history?market={token}&startTs={a}&en
 
 
 def get(url: str) -> Any:
-    req = urllib.request.Request(url, headers={"User-Agent": "crowd-calibration/0.1"})
+    # gzip: since 11-13 Polymarket's /events refuses pages with limit > 50 unless the client accepts gzip (HTTP 406)
+    req = urllib.request.Request(url, headers={"User-Agent": "crowd-calibration/0.1", "Accept-Encoding": "gzip"})
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
-            return json.load(r)
+            body = r.read()
+            return json.loads(gzip.decompress(body) if r.headers.get("Content-Encoding") == "gzip" else body)
     except urllib.error.HTTPError as exc:
         if exc.code == 422:
             return None
