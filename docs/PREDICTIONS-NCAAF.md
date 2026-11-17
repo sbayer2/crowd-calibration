@@ -135,3 +135,17 @@ from about 10:00 CDT until the last T−5.
 - **Count on 10-20:** 23 usable games; dropped: 10 without a Pinnacle T−5 (the five 11:00 kickoffs of 10-10 not
   collected, Stanford @ Notre Dame and Maryland @ Ohio State never priced, Boise State @ Fresno State not priced at
   T−5, LSU @ Kentucky, Georgia @ Alabama).
+
+## Amendment 2026-11-17, 09:20 CST (a game moved off its Saturday is dropped as postponed)
+- **Ole Miss @ Oklahoma** was listed for Saturday 11-14 at 21:15 UTC when the 11-14 Top 25 was frozen, so it entered the
+  scope. It was then rescheduled to Sunday 11-15 at 18:00 UTC (ESPN event 401856887, final on 11-15). The collector
+  takes snapshots only of Saturday Top 25 games, so it had no T−5 and was counted as "no Pinnacle T−5".
+- **Rule:** a scope game whose last listing falls on a day without a frozen Top 25 has moved off its Saturday. It is
+  dropped and counted as postponed, applying the 10-17 postponed-game rule in `docs/PREDICTIONS-MLB.md`. The moved game
+  is not in the sample, since it is not on a listed Saturday. `analyze_live.py` applies this from the frozen Top 25 days
+  in `state.json`, and `tests/test_analyze_live.py` checks it.
+- **Count on 11-17:** 87 usable games. Dropped: 14 without a Pinnacle T−5 and 1 postponed (this game). The total is
+  unchanged.
+- **Corrected claim:** on 11-17 this game was first reported as a spreads-only game that the t72 collector had added to
+  the scope. That was wrong. The t72 collector never writes the scope; only `in_scope` does (`live_odds.py:131`), and
+  it added the game while it was still listed on the Saturday.

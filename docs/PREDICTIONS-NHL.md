@@ -135,3 +135,18 @@ match, a Polymarket price within 10 minutes before the T−5 snapshot time, or a
 - **Count on 10-20:** 89 usable NHL games; dropped: 7 without a Pinnacle T−5 (the two T−5s lost to the 10-13 cap,
   already recorded, and the five above) and 1 without a Polymarket price within 10 minutes of T−5 (Florida @ Los
   Angeles, 10-07).
+
+## Amendment 2026-11-17, 09:20 CST (stop date extended to 2026-12-05; written before any NHL measure was computed)
+- **Decision (the user's, ADC-015):** the sample is every NHL game from 2026-10-06 to 2026-12-05, the day NCAA football
+  and NBA close. Everything else is unchanged: the windows, the drop rules, the measures, the predictions, the verdict
+  rules and the analysis code (`NHL_DAYS` in `analyze_live.py` is the only edit). The NHL+MLB pooled test of C2 and J1
+  runs once, after 12-05.
+- **What had been seen:** only `counts` (usable games and drop reasons) for NHL, never a measure. The MLB report
+  (M-001) was run on MLB alone (ADC-017).
+- **Why:** the 11-05 sample is 193 usable games, about half the 400 the plan expected (ADC-015). The collector kept
+  running after 11-05 with the same code, so 11-06 to 11-16 is already collected the same way.
+- **Count on 11-17:** 253 usable games (193 to 11-05, 60 from 11-06 to 11-16). Dropped: 35 without a Pinnacle T−5 (11
+  after 11-05: the Mac was shut down on the evenings of 11-09 and 11-10, plus DNS failures) and 1 without a Polymarket
+  price at T−5. Projection at about 7 games a day and 85% usable: about 360 usable by 12-05.
+- **Budget:** about 7 credits a day for NHL. 325 credits are left and the key resets to 500 on 12-01, so the extension
+  costs about 130 credits and fits. The guard (floor 25, cap 24 a day) is unchanged.

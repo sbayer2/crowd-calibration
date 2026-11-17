@@ -711,4 +711,5 @@ first day.
 
 **Reading.** In the 2026 postseason Polymarket and Pinnacle priced games almost identically, and blind Jev was near a
 coin flip. At n = 18 this is a pilot. The pre-registered NHL+MLB pooled test of C2 and J1 (sport fixed effect) runs
-after NHL closes on 11-05, with code fixed since 10-20, so seeing these numbers does not change it.
+after NHL closes on 11-05 (extended to 12-05 on 11-17, ADC-015), with code fixed since 10-20, so seeing these numbers
+does not change it.

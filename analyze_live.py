@@ -1,6 +1,7 @@
 """Score experiments 9 (NHL), 10 (MLB postseason) and 12 (NCAA football): docs/PREDICTIONS-NHL.md, -MLB.md, -NCAAF.md.
 
-Run `report` once, after collection closes (NHL 11-05, MLB at the last World Series game, NCAA football 12-05). Until
+Run `report` once, after collection closes (NHL 12-05 after ADC-015, MLB at the last World Series game, NCAA football
+12-05). Until
 then only `counts` is run on the real data: usable games and drop reasons, no measures (ADC-013).
 
     .venv/bin/python analyze_live.py counts
@@ -17,6 +18,8 @@ Choices the plans leave open, fixed here before any measure was computed on real
   - Polymarket at a moment: the last 1-minute price at or before the snapshot, at most 10 minutes older.
   - Drops, in this order: postponed listing, no Pinnacle T-5, no unique Polymarket match, no Polymarket price at T-5,
     no clean result (Polymarket resolved to exactly 0 or 1). Jev is not a drop rule; J measures use games with Jev.
+  - NCAA football (2026-11-17): a scope game whose last listing falls on a day without a frozen Top 25 was moved off its
+    Saturday and is dropped as postponed (the 10-17 rule), not as a missed T-5.
   - "Jev" is reported for both configs (noul_both, bins_plain), and each config gets its own verdict.
   - Bootstrap: 2000 resamples of games, seed 7, percentile 95% CIs. Pooled CIs resample within sport.
   - C2: logistic regression (Newton's method) on logit-prices clipped to [0.01, 0.99]; 5 folds = consecutive blocks in
@@ -48,7 +51,7 @@ ROOT = Path(__file__).parent
 CT = ZoneInfo("America/Chicago")
 SPORTS = ("nhl", "mlb", "ncaaf")
 CONFIGS = ("noul_both", "bins_plain")
-NHL_DAYS = ("2026-10-06", "2026-11-05")
+NHL_DAYS = ("2026-10-06", "2026-12-05")                      # extended from 11-05 (ADC-015, 11-17)
 PILOT_DAYS = {"2026-10-10", "2026-10-17"}                     # experiment 12's original two Saturdays
 POSTPONED = {"b9d2e07cf437b5643307aba274c45a74"}              # ALCS Game 4's first listing (MLB amendment, 10-17)
 T5, T60, POLY_STALE = (1, 12), (45, 70), 600
@@ -110,7 +113,8 @@ def games(root: Path, sport: str, now: dt.datetime | None = None) -> tuple[list[
         t60 = sorted(((t, p) for t, k, p in priced if "t60" in k and T60[0] <= mins(t) <= T60[1]), key=lambda x: abs(mins(x[0]) - 60))
         early = [(t, p) for t, k, p in priced if "early" in k and t < start]
         pm = poly.get(gid, {})
-        reason = ("postponed" if gid in POSTPONED else "no Pinnacle T-5" if not t5 else
+        moved = sport == "ncaaf" and "top25" in st and day not in st["top25"]           # rescheduled off its Saturday
+        reason = ("postponed" if gid in POSTPONED or moved else "no Pinnacle T-5" if not t5 else
                   "no unique Polymarket match" if "market_id" not in pm else
                   "no Polymarket price at T-5" if poly_at(pm.get("history_away", []), t5[-1][0]) is None else
                   "no clean result" if pm.get("away_won") not in (0, 1) else None)

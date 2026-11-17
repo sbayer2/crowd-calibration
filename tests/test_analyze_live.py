@@ -74,6 +74,16 @@ def world(root: Path, sport: str, n: int, start: dt.datetime, rng: random.Random
 
 
 class Units(unittest.TestCase):
+    def test_ncaaf_game_moved_off_its_saturday_is_postponed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            world(root, "ncaaf", 80, NOW, random.Random(3), plant=False)                # 40 games on 10-10, 40 on 10-17
+            p = root / "runs" / "ncaaf" / "state.json"
+            p.write_text(json.dumps({**json.loads(p.read_text()), "top25": {"2026-10-10": {}}}))
+            rows, drops = A.games(root, "ncaaf", NOW)
+            self.assertEqual(dict(drops), {"postponed": 40})
+            self.assertEqual(len(rows), 40)
+
     def test_novig_removes_the_margin(self):
         self.assertAlmostEqual(A.novig({"away_team": "a", "home_team": "h", "bookmakers": [odds(0.6, "a", "h")]}), 0.6, places=3)
 
@@ -108,7 +118,7 @@ class Synthetic(unittest.TestCase):
         root = Path(cls.tmp.name)
         rng = random.Random(11)
         cls.planted = {}
-        for sport, n in (("nhl", 400), ("mlb", 60), ("ncaaf", 160)):
+        for sport, n in (("nhl", 520), ("mlb", 60), ("ncaaf", 160)):     # NHL runs past 12-05
             cls.planted.update(world(root, sport, n, dt.datetime(2026, 10, 7, 23, tzinfo=dt.timezone.utc), rng, plant=sport in ("mlb", "ncaaf")))
         cls.data = A.load(root, NOW)
         cls.res = A.report(root, b=200, now=NOW)
@@ -129,7 +139,7 @@ class Synthetic(unittest.TestCase):
 
     def test_nhl_window_and_ncaaf_scope(self):
         self.assertTrue(all(A.NHL_DAYS[0] <= r["day"] <= A.NHL_DAYS[1] for r in self.data["nhl"][0]))
-        self.assertLess(len(self.data["nhl"][0]), 400)                         # games after 11-05 are excluded
+        self.assertLess(len(self.data["nhl"][0]), 520)                         # games after 12-05 are excluded
 
     def test_known_answers(self):
         r = self.res["nhl"]

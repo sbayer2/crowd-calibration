@@ -20,9 +20,10 @@ bookmaker's line. A **live collector** records three forecasters for every game,
 | **Polymarket** | 1-minute price history and the result | fetched after the games |
 | **Jev** | blind answer: told only the league, "Away vs. Home" and the date | once per game, before it starts |
 
-- **Experiment 9:** NHL, 2026-10-06 to 11-05 ([pre-registration](docs/PREDICTIONS-NHL.md)). The plan expected about
-  400 games, which overstated the schedule. Through 10-19, 97 games were played (about 7 a day) and 89 were usable
-  (92%). That projects to about 215 games by 11-05 and about 200 usable.
+- **Experiment 9:** NHL, 2026-10-06 to 12-05 ([pre-registration](docs/PREDICTIONS-NHL.md)). The plan expected about
+  400 games by its original stop date of 11-05, which overstated the schedule: 193 were usable by then. On 11-17, before
+  any measure was computed, collection was extended to 12-05 (ADC-015). That day's count was 253 usable games, with
+  about 360 projected.
 - **Experiment 10:** MLB postseason, Division Series through the World Series, a pilot of about 20 games
   ([pre-registration](docs/PREDICTIONS-MLB.md)).
 - **Experiment 12:** NCAA football, every game with an AP Top 25 team on Saturdays from 10-10 to 12-05, pooled with NHL

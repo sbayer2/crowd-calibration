@@ -157,7 +157,7 @@ data come in.
 
 ---
 
-## ADC-015 — Experiment 9 will be about half the planned size — OPEN
+## ADC-015 — Experiment 9 will be about half the planned size — DONE (extended to 12-05)
 
 **Context.** The NHL plan expected about 400 games from 10-06 to 11-05. Through 10-19, 97 games were played (about 7 a
 day) and 89 were usable (92%). That projects to about 215 games and about 200 usable by 11-05. The 400 overstated the
@@ -171,6 +171,13 @@ power.
 
 **Open.** Whether to extend collection past 11-05 is the user's decision. Any extension must be written as a plan
 amendment before any measure is computed. Credits are the limit: the NCAA football arm holds credits in reserve for the NHL arm only until 11-06 (ADC-007).
+
+**Closed 2026-11-17.** The user extended experiment 9 to 2026-12-05, the day NCAA football and NBA close. The plan
+amendment (`docs/PREDICTIONS-NHL.md`, 11-17) was written before any NHL measure was computed; only counts had been
+run. The collector had kept running after 11-05 with unchanged code, so 11-06 to 11-16 counts. `NHL_DAYS` in
+`analyze_live.py` is the only code change. On 11-17: 253 usable games (193 + 60 after 11-05), with about 360
+projected by 12-05. The extension costs about 130 credits against 325 left plus the 12-01 reset. The NHL+MLB pooled
+test runs once, after 12-05.
 
 ---
 
@@ -202,3 +209,20 @@ the report ran.
 **Consequences.** No NHL or NCAA football measure was computed; the pooled C2 and J1 (ADC-011) still run at NHL's close
 with the same code. Results: M-001 in `tests/FINDINGS.md`. The drop review also identified the cause of the Rays @
 Yankees miss (10-07), not recorded before: the MLB collector ran no ticks from 5:52 to 7:34 PM CDT.
+
+---
+
+## ADC-018 — An NCAA football game moved off its Saturday is dropped as postponed — DONE
+
+**Context.** Ole Miss @ Oklahoma was listed for Saturday 11-14 when that day's Top 25 was frozen, so it entered the
+experiment 12 scope. It was then rescheduled to Sunday 11-15. The scope is sticky, but the collector snapshots only
+Saturday Top 25 games, so the game had no T-5 and counted as a collector miss ("no Pinnacle T-5"). It was first
+misreported as a spreads-only game that the t72 collector had added; the t72 collector never writes the scope.
+
+**Decision.** A scope game whose last listing falls on a day without a frozen Top 25 is dropped as postponed, applying
+the 10-17 postponed-game rule. It is not counted as a missed T-5. The drop total is unchanged; only the reason moves.
+This is applied in `analyze_live.games` and tested on synthetic data. The plan amendment is in
+`docs/PREDICTIONS-NCAAF.md` (11-17).
+
+**Consequences.** The NCAA football drops read 14 "no Pinnacle T-5" plus 1 postponed. Later reschedules are classed the
+same way without a manual list. Spreads (experiment 13) are unaffected: they read their own t72 files.
