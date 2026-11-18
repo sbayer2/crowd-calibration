@@ -226,3 +226,29 @@ This is applied in `analyze_live.games` and tested on synthetic data. The plan a
 
 **Consequences.** The NCAA football drops read 14 "no Pinnacle T-5" plus 1 postponed. Later reschedules are classed the
 same way without a manual list. Spreads (experiment 13) are unaffected: they read their own t72 files.
+
+## ADC-019 — NHL replication sample to the end of the regular season (Experiment 9b) — OPEN
+
+**Context.** On 2026-11-18 the user asked to extend NHL collection through the full season. The NHL schedule API gives
+the 2026-27 regular season end as Saturday 2027-04-10 (1,344 games in all). About 1,040 games remain after 11-17;
+at the current usable rate (about 88%) that is about 900 more usable games. NHL alone costs about 7.5 Odds API
+credits a day (about 230 a month against 500), so credits are not the constraint. Two designs were weighed: move the
+experiment 9 close to 04-10, or keep the 12-05 close and add a separate sample.
+
+**Decision (user, 11-18).** Keep experiment 9's close at 12-05 and run its report in December as planned. Games from
+2026-12-06 to 2027-04-10 form a new pre-registered replication sample, Experiment 9b. It tests the same predictions
+(C1-C3, J1-J3) with the same methods on new games, and its analysis runs once, after 04-10. Keeping the samples
+separate also keeps any drift in the unpinnable Jev gateway alias (`typesafe-ai/jev`) out of experiment 9.
+
+**To do before 12-06 (not yet done):**
+- Write the 9b amendment in `docs/PREDICTIONS-NHL.md` before any NHL measure is computed. It must say what counts as
+  replicated (for example, the same sign and the same decision threshold as experiment 9).
+- `analyze_live.py`: add a 9b window (`2026-12-06` to `2027-04-10`) as its own sample, plus a synthetic test.
+- `live_odds.py`: run `collect-poly` daily inside the NHL tick at a quiet hour (about 04:00 CT). Today it runs only
+  from the session-only hourly check or on "update", and an unmatched game is retried for only 3 days. A 5-month run
+  cannot depend on a Claude session. It must not run near a T-5 window.
+- README, `tests/FINDINGS.md` and the project memory.
+
+**Consequences.** The NHL LaunchAgent keeps collecting past 12-05 with no change (it has no stop date). The Mac must
+stay awake and online on game evenings through 04-10. The Jev gateway cost for about 1,000 more games x 2 configs has
+not been measured.
