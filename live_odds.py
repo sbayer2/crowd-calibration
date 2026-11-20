@@ -9,6 +9,9 @@ Collected going forward (The Odds API free tier has no history). A LaunchAgent r
   - Jev, blind, once per game before it starts: two configs from experiment 8 (noul_both, bins_plain),
     told only the league, "Away vs. Home" and the date. Each request is fresh and stateless.
 Polymarket prices (1-minute history at the snapshot times) and results are fetched afterwards (`collect-poly`).
+The tick runs it once a day itself (ADC-019): the first tick in POLY_AT Central (04:00-04:20), and only when no
+game in scope starts within POLY_QUIET, since it can page Polymarket for minutes and launchd starts no tick meanwhile.
+NCAA football also runs `collect-scores` then. A failed run is not marked done; the next eligible tick retries.
 Credit guard: at most DAILY_CAP odds calls per sport per UTC day; none below MIN_REMAINING credits (shared key, read
 from the newest snapshot of any sport). Until NCAAF_RESERVE_UNTIL, NCAA football also leaves RESERVE_PER_DAY credits a
 day for the NHL and MLB arms.
@@ -30,7 +33,9 @@ poll; then asks Jev, blind, for the margin and the total. Records: runs/ncaaf/t7
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as dt
+import io
 import json
 import os
 import re
@@ -62,6 +67,8 @@ NCAAF_RESERVE_UNTIL, RESERVE_PER_DAY = dt.date(2026, 11, 6), 12          # prote
 WINDOWS = {"t60": (45, 70), "t5": (1, 12)}               # minutes before the slot's start
 JEV_CONFIGS = ["noul_both", "bins_plain"]
 T72_AT, T72_LATE = dt.time(11, 0), dt.timedelta(minutes=15)     # Wednesday 11:00 Central; flagged late after 15 minutes
+POLY_AT, POLY_QUIET = (dt.time(4, 0), dt.time(4, 20)), dt.timedelta(hours=3)   # daily in-tick collect-poly (ADC-019)
+POLY_RETRY_DAYS = 10                    # a matched game without a result is retried this long after its start
 
 
 def now() -> dt.datetime:
@@ -244,6 +251,27 @@ def tick() -> None:
         except Exception as exc:                                                       # not marked done: the next tick retries
             print(f"{t:%H:%M} t72 failed ({exc!r}); will retry while the window is open")
     save("state.json", st)
+    daily_collect(st, t)
+
+
+def daily_collect(st: dict[str, Any], t: dt.datetime) -> None:
+    """Once per Central day, early morning and clear of every snapshot window: Polymarket results (+ ESPN finals)."""
+    day, lt = t.astimezone(CT).date().isoformat(), t.astimezone(CT).time()
+    if st.get("poly_day") == day or not POLY_AT[0] <= lt < POLY_AT[1]:
+        return
+    if any(dt.timedelta(0) < iso(e["commence_time"]) - t <= POLY_QUIET for e in in_scope(st, t)):
+        return
+    try:
+        for name, fn in [("collect-poly", collect_poly)] + ([("collect-scores", collect_scores)] if SPORT == "ncaaf" else []):
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                fn()
+            print(f"{t:%H:%M} {name}: {(buf.getvalue().strip().splitlines() or ['done'])[-1]}")   # one line in tick.log
+    except Exception as exc:                                                           # not marked done: retried
+        print(f"{t:%H:%M} daily collect failed ({exc!r}); will retry")
+        return
+    st["poly_day"] = day
+    save("state.json", st)
 
 
 def t72_window(st: dict[str, Any], t: dt.datetime) -> tuple[str, dt.date, dt.datetime] | None:
@@ -374,7 +402,7 @@ def collect_poly() -> None:
         games = {k: g for k, g in games.items() if k in st["scope"]}
     poly = load("poly.json", {})
     t = now()
-    retry = lambda g: g["id"] not in poly or (poly[g["id"]].get("away_won") is None and iso(g["commence_time"]) > t - dt.timedelta(days=3))
+    retry = lambda g: g["id"] not in poly or (poly[g["id"]].get("away_won") is None and iso(g["commence_time"]) > t - dt.timedelta(days=POLY_RETRY_DAYS))
     todo = [g for g in games.values() if retry(g) and iso(g["commence_time"]) < t - dt.timedelta(hours=5)]
     if not todo:
         print("nothing new to collect")
